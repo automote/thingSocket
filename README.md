@@ -1,5 +1,5 @@
 # smart-plug
-Thid is smart plug arduino sketch open for people to develop or duplicate.
+This is smart plug arduino sketch open for people to develop or duplicate.
 
 Smart Plug is am attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs and sockets. The idea revolves around identifying everyday use devices and convert them into IoT device by adding Wi-Fi, BLE or ZigBee capabilities.
 
