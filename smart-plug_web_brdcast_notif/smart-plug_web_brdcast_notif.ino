@@ -16,6 +16,7 @@
 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include <EEPROM.h>
 // D5 ~ 8 are smart plug GPIOs
 #define PLUG_1 14 
 #define PLUG_2 12
@@ -28,12 +29,12 @@
 #define DEBUG 0
 
 // Global Variables
-const char* SSID = "IOT";
-const char* PASSWORD = "hasiot@123";
+const char* SSID = "AndroidAP";
+const char* PASSWORD = "test12345";
 uint8_t MAC_array[6];
 char MAC_char[18];
 
-static unsigned char bcast[4] = { 192, 168, 0, 255 } ;   // broadcast IP address
+static unsigned char bcast[4] = { 192, 168, 43, 255 } ;   // broadcast IP address
 unsigned char count = 0;
 
 WiFiUDP Udp;
@@ -125,7 +126,6 @@ void loop() {
     notification_broadcast(which_plug, state);
   }
     
-  client.flush();
   
   if(DEBUG){
   Serial.println("which plug is " + which_plug);
@@ -242,7 +242,7 @@ void Broadcast() {
   brdcast_msg += WiFi.localIP();
   brdcast_msg += "|"; 
   Serial.println(brdcast_msg); 
-  Udp.write("hello");
+  Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
 }
 
@@ -259,6 +259,6 @@ void notification_broadcast(int which_plug, int state){
   notif_msg += "|";
   notif_msg += (state > 0)?"ON|":"OFF|";
   Serial.println(notif_msg); 
-  Udp.write("Notification Service");
+  Udp.write(notif_msg.c_str());
   Udp.endPacket();
 }
