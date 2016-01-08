@@ -20,6 +20,7 @@
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *  server_ip is the IP address of the ESP8266 module, will be 
  *  printed to Serial when the module is connected.
+ *  The cpmplete project can be cloned @ https://github.com/automote/smart-plug.git
  */
  
 #include <ESP8266WiFi.h>
@@ -27,7 +28,7 @@
 #include <WiFiClient.h>
 #include <EEPROM.h>
 
-// D5 ~ 8 are smart plug GPIOs
+// GPIO 12,13,14,15 are smart plug GPIOs
 #define PLUG_1 14
 #define PLUG_2 12
 #define PLUG_3 13
@@ -40,7 +41,7 @@
 #define MAX_RETRIES 20
 
 MDNSResponder mdns;
-// Create an instance of the server
+// Create an instance of the Web server
 // specify the port to listen on as an argument
 WiFiServer server(80);
 
@@ -50,7 +51,7 @@ uint8_t MAC_array[6];
 char MAC_char[18];
 
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
-unsigned char count = 0;
+unsigned int count = 0;
 bool reboot_flag = false;
 
 // Create an instance of the UDP server
@@ -76,9 +77,16 @@ void setup() {
 }
 
 void loop() {
+  if (count % 1200 == 0) {
+    // Test WiFi connection every minute and set the reboot flag if necessary
+    // count is incremented roughly every 50ms
+    Serial.println("checking wifi connection");
+    reboot_flag = !TestWifi();
+  }
   // Serving the requests from the client
   WebService(0);
   if (reboot_flag) {
+    Serial.println("Rebooting device");
     delay(10000);
     ESP.restart();
   }
@@ -86,6 +94,7 @@ void loop() {
 
 void InitHardware(void) {
   Serial.begin(115200);
+  // Specify EEPROM block
   EEPROM.begin(512);
   delay(10);
   Serial.println();
@@ -106,8 +115,10 @@ void InitHardware(void) {
   for (int i = 0; i < sizeof(MAC_array); ++i) {
     sprintf(MAC_char, "%s%02X:", MAC_char, MAC_array[i]);
   }
+  MAC_char[strlen(MAC_char) - 1] = '\0';
   Serial.print("Printing MAC: ");
   Serial.print(MAC_char);
+  Serial.println();
 }
 
 void BroadcastSetup(void) {
@@ -215,7 +226,6 @@ void WebService(bool webtype) {
   if (!client) {
     if (count % 100 == 0) {
       Broadcast();
-      count == 0;
     }
     delay(50);
     count++;
@@ -353,11 +363,10 @@ void WebService(bool webtype) {
       }
 
       if (DEBUG) {
-        delay(10);
-        Serial.println();
-        Serial.println();
-        Serial.println("which plug is " + which_plug);
-        Serial.println("State is " + state);
+        Serial.print("which plug is ");
+        Serial.println(which_plug);
+        Serial.print("State is ");
+        Serial.println(state);
       }
 
       // Prepare the response
@@ -480,6 +489,7 @@ void Broadcast(void) {
     bcast[i] = ip[i];
   }
   bcast[3] = 255;
+  // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg = "thingTronics|";
   brdcast_msg += "WiFiPlug|";
