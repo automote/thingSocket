@@ -27,7 +27,7 @@
 #include <WiFiClient.h>
 #include <EEPROM.h>
 
-// D5 ~ 8 are smart plug GPIOs
+// GPIO 12,13,14,15 are smart plug GPIOs
 #define PLUG_1 14
 #define PLUG_2 12
 #define PLUG_3 13
@@ -40,7 +40,7 @@
 #define MAX_RETRIES 20
 
 MDNSResponder mdns;
-// Create an instance of the server
+// Create an instance of the Web server
 // specify the port to listen on as an argument
 WiFiServer server(80);
 
@@ -86,6 +86,7 @@ void loop() {
 
 void InitHardware(void) {
   Serial.begin(115200);
+  // Specify EEPROM block
   EEPROM.begin(512);
   delay(10);
   Serial.println();
@@ -106,8 +107,10 @@ void InitHardware(void) {
   for (int i = 0; i < sizeof(MAC_array); ++i) {
     sprintf(MAC_char, "%s%02X:", MAC_char, MAC_array[i]);
   }
+  MAC_char[strlen(MAC_char) - 1] = '\0';
   Serial.print("Printing MAC: ");
   Serial.print(MAC_char);
+  Serial.println();
 }
 
 void BroadcastSetup(void) {
@@ -353,11 +356,10 @@ void WebService(bool webtype) {
       }
 
       if (DEBUG) {
-        delay(10);
-        Serial.println();
-        Serial.println();
-        Serial.println("which plug is " + which_plug);
-        Serial.println("State is " + state);
+        Serial.print("which plug is ");
+        Serial.println(which_plug);
+        Serial.print("State is ");
+        Serial.println(state);
       }
 
       // Prepare the response
@@ -480,6 +482,7 @@ void Broadcast(void) {
     bcast[i] = ip[i];
   }
   bcast[3] = 255;
+  // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg = "thingTronics|";
   brdcast_msg += "WiFiPlug|";

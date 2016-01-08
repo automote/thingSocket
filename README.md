@@ -9,12 +9,12 @@ We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the cro
 # Software
 <p>
 The software is completely written in <b>Arduino IDE</b>, so anyone familiar with Arduino IDE can tinker with the code and personalise the device according to his taste.
-The Algorithmic flow chart is mentioned below
+The Algorithmic flow chart is mentioned in `flow-chart.png` 
 <src img="flow-chart.png" height="100" width="60">
 <p>
 While in AP mode SSID and Password shoud be given using the following API
 	<ul>
-	<li>http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"</li>
+	<li>http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey\"</li>
 	</ul>
 A webpage is also provided for entering SSID and Password if you are using the browser method.	
 </p>
