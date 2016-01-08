@@ -12,7 +12,8 @@
 #define BROADCAST_PORT 8888   // Port for sending general broadcast messages
 #define NOTIFICATION_PORT 8000     // Port for notification broadcasts
 // For debugging interface
-#define DEBUG 0
+#define DEBUG 1
+#define MAX_RETRIES 20
 
 MDNSResponder mdns;
 // Create an instance of the server
@@ -24,27 +25,42 @@ String st;
 uint8_t MAC_array[6];
 char MAC_char[18];
 
-static unsigned char bcast[4] = { 192, 168, 0, 255 } ;   // broadcast IP address
+static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
 unsigned char count = 0;
+bool reboot_flag = false;
 
 // Create an instance of the UDP server
 WiFiUDP Udp;
 
 void setup() {
+  bool AP_required = false;
   // Initialise the hardware
   InitHardware();
 
-  //WiFiSetup();
+  // Setting up the broadcast service
   BroadcastSetup();
+  if (DEBUG){
   // Search for SSID and password from the EEPROM first and try to connect to AP
-  SSIDSearch();
+  AP_required = !SSIDSearch();
+  
   // If it fails then make yourself AP and ask for SSID and password from user
-  SetupAP();
+  if (AP_required){
+    SetupAP();
+  }
+  // Initialise the webserver for direct initialization
+  WebServiceInit();
+  }
 }
 
 void loop() {
+  if(DEBUG){
   // Serving the requests from the client
-  ServeRequest(0);
+    WebService(0);
+    if (reboot_flag) {
+      delay(10000);
+      ESP.restart();
+    }
+  }
 }
 
 void InitHardware() {
@@ -73,29 +89,12 @@ void InitHardware() {
   Serial.print(MAC_char);
 }
 
-//void WiFiSetup() {
-//  // Connect to WiFi network
-//  Serial.println();
-//  Serial.println();
-//  Serial.print("Connecting to ");
-//  Serial.println(SSID);
-//
-//  WiFi.begin(SSID, PASSWORD);
-//
-//  while (WiFi.status() != WL_CONNECTED) {
-//    delay(500);
-//    Serial.print(".");
-//  }
-//  Serial.println("");
-//  Serial.println("WiFi connected");
-//}
-
 void BroadcastSetup() {
   Udp.begin(BROADCAST_PORT);
   Udp.begin(NOTIFICATION_PORT);
 }
 
-void SSIDSearch() {
+bool SSIDSearch() {
   Serial.println("Start SSID search from EEPROM");
   // Read EEPROM for SSID and Password
   Serial.println("Reading SSID from EEPROM");
@@ -117,63 +116,75 @@ void SSIDSearch() {
   if ( essid.length() > 1 ) {
     // Try to connect to AP with given SSID and Password
     WiFi.begin(essid.c_str(), epass.c_str());
-    if ( TestWifi() == 20 ) {
-      Serial.println("starting testing wifi connection");
-      LaunchWeb(0);
-      return;
+    if ( TestWifi() ) {
+      Serial.println("Wifi test successful");
+      return true;
+    }
+    else {
+      Serial.println("Wifi test failed");
+      return false;
     }
   }
 }
 
-int TestWifi(void) {
-  int c = 0;
-  Serial.println("Waiting for Wifi to connect");
-  while ( c < 20 ) {
+bool TestWifi(void) {
+  int retries = 0;
+  Serial.println("Waiting for Wi-Fi to connect");
+  while ( retries < MAX_RETRIES ) {
     if (WiFi.status() == WL_CONNECTED) {
-      return (20);
+      return true;
     }
     delay(500);
     Serial.print(WiFi.status());
-    c++;
+    retries++;
   }
-  Serial.println("Connect timed out, opening AP");
-  return (10);
+  Serial.println("Connect timed out");
+  return false;
 }
 
-void LaunchWeb(int webtype) {
+void WebServiceInit() {
   Serial.println("");
-  Serial.println("WiFi connected");
+  Serial.println("Initializing Web Services");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.softAPIP());
 
-  //          if (!mdns.begin("esp8266",WiFi.localIP())) {
-  //            Serial.println("Error setting up MDNS responder!");
-  //            while(1) {
-  //              delay(1000);
-  //            }
-  //          }
-  //          Serial.println("mDNS responder started");
-  // Start the server
+  // Starting web server
   server.begin();
   Serial.println("Server started");
-  int b = 20;
-  int c = 0;
-  while (b == 20) {
-    b = MDNSService(webtype);
+
+  // Starting mDNS Service
+  MDNSService();
+}
+
+void MDNSService() {
+  // Set up mDNS responder:
+  // - first argument is the domain name, in this example
+  //   the fully-qualified domain name is "esp8266.local"
+  // - second argument is the IP address to advertise
+  //   we send our IP address on the WiFi network
+  if (!MDNS.begin("esp8266")) {
+    Serial.println("Error setting up MDNS responder!");
+    return;
   }
-  //server.close();
-}
+  Serial.println("mDNS responder started");
 
-int MDNSService(int webtype) {
-  // Check for any mDNS queries and send responses
-  //  mdns.update();
   // Add service to MDNS-SD
-  //MDNS.addService("http", "tcp", 80);
-
-  return(ServeRequest(webtype));
+  MDNS.addService("http", "tcp", 80);
+  return;
 }
 
-int ServeRequest(int webtype) {
+void WebServiceDaemon(bool webtype){
+  while(1){
+  // Running Web Service
+  WebService(webtype);
+    if (reboot_flag) {
+      delay(10000);
+      ESP.restart();
+    }
+  }
+}
+
+void WebService(bool webtype) {
   // Match the request
   int which_plug = -1; // Selects the plug to use
   int state = -1; // Initial state
@@ -187,7 +198,7 @@ int ServeRequest(int webtype) {
     }
     delay(50);
     count++;
-    return (20);
+    return;
   }
   Serial.println("");
   Serial.println("New client");
@@ -207,14 +218,14 @@ int ServeRequest(int webtype) {
   if (addr_start == -1 || addr_end == -1) {
     Serial.print("Invalid request: ");
     Serial.println(req);
-    return (20);
+    return;
   }
   req = req.substring(addr_start + 1, addr_end);
   Serial.print("Request: ");
   Serial.println(req);
   client.flush();
   String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
-  if ( webtype == 1 ) {
+  if (webtype) {
     if (req == "/")
     {
       IPAddress ip = WiFi.softAPIP();
@@ -261,6 +272,7 @@ int ServeRequest(int webtype) {
       s += "Found ";
       s += req;
       s += "<p> saved to EEPROM... System will reboot in 10 seconds";
+      reboot_flag = true;
     }
     else
     {
@@ -268,8 +280,7 @@ int ServeRequest(int webtype) {
       Serial.println("Sending 404");
     }
   }
-  else
-  {
+  else {
     if (req == "/")
     {
       s += "Hello from ESP8266";
@@ -367,6 +378,11 @@ int ServeRequest(int webtype) {
      }
       EEPROM.commit();
     }
+    else if ( req.startsWith("/reboot")) {
+      s += "Rebooting Wi-Plug";
+      Serial.println("Sending 200");
+      reboot_flag = true;
+    }
     else
     {
       s = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -379,7 +395,7 @@ int ServeRequest(int webtype) {
 
   // The client will actually be disconnected
   // when the function returns and 'client' object is detroyed
-  return (20);
+  return;
 }
 
 void SetupAP() {
@@ -426,20 +442,27 @@ void SetupAP() {
   st += "</ul>";
   delay(100);
   WiFi.softAP(ssid);
-  Serial.println("Soft AP");
+  Serial.println("Initiating Soft AP");
   Serial.println("");
-  LaunchWeb(1);
-  Serial.println("over");
+  WebServiceInit();
+  WebServiceDaemon(1);
 }
 
 void Broadcast() {
+  IPAddress ip = WiFi.localIP();
+  String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+  for(int i=0; i<3; i++){
+    bcast[i] = ip[i];
+  }
+  bcast[3] = 255;
+  //Serial.println(bcast);
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg = "thingTronics|";
   brdcast_msg += "WiFiPlug|";
   brdcast_msg += "v0.5|";
   brdcast_msg += MAC_char;
   brdcast_msg += "|";
-  brdcast_msg += WiFi.localIP();
+  brdcast_msg += ipStr;
   brdcast_msg += "|";
   Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
@@ -447,13 +470,20 @@ void Broadcast() {
 }
 
 void NotificationBroadcast(int which_plug, int state) {
+  IPAddress ip = WiFi.localIP();
+  String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+  for(int i=0; i<3; i++){
+    bcast[i] = ip[i];
+  }
+  bcast[3] = 255;
+  //Serial.println(bcast);
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
   String notif_msg = "thingTronics|";
   notif_msg += "WiFiPlug|";
   notif_msg += "v0.5|";
   notif_msg += MAC_char;
   notif_msg += "|";
-  notif_msg += WiFi.localIP();
+  notif_msg += ipStr;
   notif_msg += "|";
   notif_msg += String(which_plug);
   notif_msg += "|";
