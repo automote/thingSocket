@@ -10,6 +10,7 @@ We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the cro
 <p>
 The software is completely written in <b>Arduino IDE</b>, so anyone familiar with Arduino IDE can tinker with the code and personalise the device according to his taste.
 The Algorithmic flow chart is mentioned below
+![Algorithmic Flow Chart][flow-chart]
 <src img="flow-chart.png" height="100" width="60">
 <p>
 While in AP mode SSID and Password shoud be given using the following API
