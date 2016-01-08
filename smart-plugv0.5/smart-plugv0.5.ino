@@ -20,6 +20,7 @@
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *  server_ip is the IP address of the ESP8266 module, will be 
  *  printed to Serial when the module is connected.
+ *  The cpmplete project can be cloned @ https://github.com/automote/smart-plug.git
  */
  
 #include <ESP8266WiFi.h>
@@ -50,7 +51,7 @@ uint8_t MAC_array[6];
 char MAC_char[18];
 
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
-unsigned char count = 0;
+unsigned int count = 0;
 bool reboot_flag = false;
 
 // Create an instance of the UDP server
@@ -76,9 +77,16 @@ void setup() {
 }
 
 void loop() {
+  if (count % 1200 == 0) {
+    // Test WiFi connection every minute and set the reboot flag if necessary
+    // count is incremented roughly every 50ms
+    Serial.println("checking wifi connection");
+    reboot_flag = !TestWifi();
+  }
   // Serving the requests from the client
   WebService(0);
   if (reboot_flag) {
+    Serial.println("Rebooting device");
     delay(10000);
     ESP.restart();
   }
@@ -218,7 +226,6 @@ void WebService(bool webtype) {
   if (!client) {
     if (count % 100 == 0) {
       Broadcast();
-      count == 0;
     }
     delay(50);
     count++;
