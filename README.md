@@ -1,8 +1,8 @@
-# thingPlug
+# thingSocket
 
-<b>thingPlug</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
+<b>thingSocket</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
 
-thingPlug is am attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs and sockets and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
+thingSocket is am attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs and sockets and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
 
 We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the crowd favourite ESP8266 modules and we are planning to keep the hardware and software design open. This would encourage school and college students and even IoT enthusiasts to get into the IoT Bandwagon.
 
