@@ -54,10 +54,13 @@ const char* software_version = "v0.6";
 String st;
 uint8_t MAC_array[6];
 char MAC_char[18];
-
-
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
+char zone[15] = "default";
+char appl_type[15] = "socket";
+char appl_name[15] = "thingSocket";
 unsigned int count = 0;
+
+// Reboot flag to reboot the device when necessary
 bool reboot_flag = false;
 
 // Create an instance of the UDP server
@@ -499,10 +502,10 @@ void Broadcast(void) {
   // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg = "thingTronics|";
-  brdcast_msg += "Plug|";
-  notif_msg += hardware_version;
-  notif_msg += ":";
-  notif_msg += software_version;
+  brdcast_msg += "thingSocket|";
+  brdcast_msg += hardware_version;
+  brdcast_msg += ":";
+  brdcast_msg += software_version;
   brdcast_msg += "|";
 //  brdcast_msg += MAC_char;
 //  brdcast_msg += "|";
@@ -520,7 +523,7 @@ void NotificationBroadcast(int which_plug, int state) {
   // Building up the Notification message
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
   String notif_msg = "thingTronics|";
-  notif_msg += "Plug|";
+  notif_msg += "thingSocket|";
   notif_msg += hardware_version;
   notif_msg += ":";
   notif_msg += software_version;
