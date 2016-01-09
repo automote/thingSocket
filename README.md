@@ -35,7 +35,7 @@ The server will set a GPIO pin depending upon the request
 	</ol>
 Other functionality include
 	<ul>
-		<li>http://server_ip/cleareeprom will clear the EEPROM contents. Its serves the purpose of factory resetting the device</li>
+		<li>http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device</li>
 		<li>http://server_ip/reboot will reboot the device after 10 seconds</li>
 	</ul>
 where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed to Serial when the module is connected.

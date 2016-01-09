@@ -16,7 +16,7 @@
  *    http://server_ip/plug/3/1 will set the GPIO13 high
  *    http://server_ip/plug/4/0 will set the GPIO15 low,
  *    http://server_ip/plug/4/1 will set the GPIO15 high
- *    http://server_ip/cleareeprom will clear the EEPROM contents. Its serves the purpose of factory resetting the device.
+ *    http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device.
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *  server_ip is the IP address of the ESP8266 module, will be 
  *  printed to Serial when the module is connected.
@@ -401,15 +401,16 @@ void WebService(bool webtype) {
         s += "Invalid Request.<br> Try /plug/<1to4>/<0or1>, or /plug/read.";
       }
     }
-    else if ( req.startsWith("/cleareeprom") ) {
+    else if ( req.startsWith("/factoryreset") ) {
       s += "Hello from Wi-Plug";
-      s += "<p>Clearing the EEPROM<p>";
+      s += "<p>Factory Resetting the device<p>";
       Serial.println("Sending 200");
       Serial.println("clearing eeprom");
       for (int i = 0; i < 96; ++i) {
         EEPROM.write(i, 0);
       }
       EEPROM.commit();
+      reboot_flag = true;
     }
     else if ( req.startsWith("/reboot")) {
       s += "Rebooting Wi-Plug";
