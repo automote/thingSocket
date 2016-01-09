@@ -1,8 +1,8 @@
-# Wi-Plug
+# thingPlug
 
-<b>Wi-Plug</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
+<b>thingPlug</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
 
-Wi-plug is am attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs and sockets and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
+thingPlug is am attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs and sockets and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
 
 We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the crowd favourite ESP8266 modules and we are planning to keep the hardware and software design open. This would encourage school and college students and even IoT enthusiasts to get into the IoT Bandwagon.
 
@@ -35,7 +35,7 @@ The server will set a GPIO pin depending upon the request
 	</ol>
 Other functionality include
 	<ul>
-		<li>http://server_ip/cleareeprom will clear the EEPROM contents. Its serves the purpose of factory resetting the device</li>
+		<li>http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device</li>
 		<li>http://server_ip/reboot will reboot the device after 10 seconds</li>
 	</ul>
 where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed to Serial when the module is connected.
