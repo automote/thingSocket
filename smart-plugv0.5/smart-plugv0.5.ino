@@ -47,8 +47,6 @@ WiFiServer server(80);
 
 // Global Constant
 const char* ssid = "Wi-Plug";
-const char* hardware_version = "v0.5";
-const char* software_version = "v0.6";
 
 // Global Variable
 String st;
@@ -58,6 +56,8 @@ char MAC_char[18];
 
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
 unsigned int count = 0;
+
+// Reboot flag for rebooting when required
 bool reboot_flag = false;
 
 // Create an instance of the UDP server
@@ -500,10 +500,6 @@ void Broadcast(void) {
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg = "thingTronics|";
   brdcast_msg += "Plug|";
-  notif_msg += hardware_version;
-  notif_msg += ":";
-  notif_msg += software_version;
-  brdcast_msg += "|";
 //  brdcast_msg += MAC_char;
 //  brdcast_msg += "|";
 //  brdcast_msg += ipStr;
@@ -521,19 +517,10 @@ void NotificationBroadcast(int which_plug, int state) {
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
   String notif_msg = "thingTronics|";
   notif_msg += "Plug|";
-  notif_msg += hardware_version;
-  notif_msg += ":";
-  notif_msg += software_version;
-  notif_msg += "|";
-  notif_msg += zone;
-  notif_msg += "|";
-  notif_msg += appl_type;
-  notif_msg += "|";
-  notif_msg += appl_name;
-  //notif_msg += MAC_char;
-  //notif_msg += "|";
-  //notif_msg += ipStr;
-  //notif_msg += "|";
+//notif_msg += MAC_char;
+//notif_msg += "|";
+//notif_msg += ipStr;
+//notif_msg += "|";
   notif_msg += String(which_plug);
   notif_msg += "|";
   notif_msg += (state > 0) ? "ON|" : "OFF|";
