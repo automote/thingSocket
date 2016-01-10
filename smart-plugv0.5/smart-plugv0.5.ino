@@ -1,5 +1,5 @@
 /*
- *  This sketch is the source code for Wi-Plug.
+ *  This sketch is the source code for thingSocket.
  *  The sketch will search for SSID and Password in EEPROM and 
  *  tries to connect to the AP using the SSID and Password. 
  *  If it fails then it boots into AP mode and asks for SSID and Password from the user
@@ -20,7 +20,7 @@
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *  server_ip is the IP address of the ESP8266 module, will be 
  *  printed to Serial when the module is connected.
- *  The cpmplete project can be cloned @ https://github.com/automote/smart-plug.git
+ *  The cpmplete project can be cloned @ https://github.com/automote/thingSocket.git
  */
  
 #include <ESP8266WiFi.h>
@@ -46,7 +46,7 @@ MDNSResponder mdns;
 WiFiServer server(80);
 
 // Global Constant
-const char* ssid = "Wi-Plug";
+const char* ssid = "thingSocket";
 
 // Global Variable
 String st;
@@ -314,7 +314,7 @@ void WebService(bool webtype) {
     else
     {
       s = "HTTP/1.1 404 Not Found\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
-      s += "<h1>404</h1><h3>Page Not Found</h3>";
+      s += "<h1>404</h1>Page Not Found";
       Serial.println("Sending 404");
     }
   }
@@ -499,7 +499,8 @@ void Broadcast(void) {
   // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg = "thingTronics|";
-  brdcast_msg += "Plug|";
+  brdcast_msg += "thingSocket|";
+  // Include MAC and IP in broadcast service if required
 //  brdcast_msg += MAC_char;
 //  brdcast_msg += "|";
 //  brdcast_msg += ipStr;
@@ -510,13 +511,12 @@ void Broadcast(void) {
 }
 
 void NotificationBroadcast(int which_plug, int state) {
-  //IPAddress ip = WiFi.localIP();
-  //String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-
+  
   // Building up the Notification message
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
   String notif_msg = "thingTronics|";
-  notif_msg += "Plug|";
+  notif_msg += "thingSocket|";
+  // Include MAC and IP in notification service if required
 //notif_msg += MAC_char;
 //notif_msg += "|";
 //notif_msg += ipStr;

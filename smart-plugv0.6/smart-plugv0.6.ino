@@ -1,9 +1,9 @@
 /*
  *  This sketch is the source code for Wi-Plug.
- *  The sketch will search for SSID and Password in EEPROM and 
- *  tries to connect to the AP using the SSID and Password. 
+ *  The sketch will search for SSID and Password in EEPROM and
+ *  tries to connect to the AP using the SSID and Password.
  *  If it fails then it boots into AP mode and asks for SSID and Password from the user
- *  API for AP (SSID = Wi-Plug) 
+ *  API for AP (SSID = Wi-Plug)
  *    http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
  *  A webpage is also provided for entering SSID and Password if you are using the browser method.
  *  The server will set a GPIO pin depending on the request
@@ -18,11 +18,11 @@
  *    http://server_ip/plug/4/1 will set the GPIO15 high
  *    http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device.
  *    http://server_ip/reboot will reboot the device after 10 seconds
- *  server_ip is the IP address of the ESP8266 module, will be 
+ *  server_ip is the IP address of the ESP8266 module, will be
  *  printed to Serial when the module is connected.
  *  The cpmplete project can be cloned @ https://github.com/automote/smart-plug.git
  */
- 
+
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <WiFiClient.h>
@@ -46,18 +46,16 @@ MDNSResponder mdns;
 WiFiServer server(80);
 
 // Global Constant
-const char* ssid = "Wi-Plug";
 const char* hardware_version = "v0.5";
 const char* software_version = "v0.6";
 
 // Global Variable
+const char* ssid = "thingSocket";
 String st;
+String zone, appl_type, appl_name;
 uint8_t MAC_array[6];
 char MAC_char[18];
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
-char zone[15] = "default";
-char appl_type[15] = "socket";
-char appl_name[15] = "thingSocket";
 unsigned int count = 0;
 
 // Reboot flag to reboot the device when necessary
@@ -73,16 +71,17 @@ void setup() {
 
   // Setting up the broadcast service
   BroadcastSetup();
-  
+
   // Search for SSID and password from the EEPROM first and try to connect to AP
   AP_required = !SSIDSearch();
+  ZoneSearch();
 
   // If it fails then make yourself AP and ask for SSID and password from user
   if (AP_required) {
     SetupAP();
-   }
-   // Initialise the webserver for direct initialization
-   WebServiceInit();
+  }
+  // Initialise the webserver for direct initialization
+  WebServiceInit();
 }
 
 void loop() {
@@ -140,16 +139,14 @@ bool SSIDSearch(void) {
   // Read EEPROM for SSID and Password
   Serial.println("Reading SSID from EEPROM");
   String essid;
-  for (int i = 0; i < 32; ++i)
-  {
+  for (int i = 0; i < 32; ++i) {
     essid += char(EEPROM.read(i));
   }
   Serial.print("SSID: ");
   Serial.println(essid);
   Serial.println("Reading Password from EEPROM");
   String epass = "";
-  for (int i = 32; i < 96; ++i)
-  {
+  for (int i = 32; i < 96; ++i) {
     epass += char(EEPROM.read(i));
   }
   Serial.print("PASS: ");
@@ -166,6 +163,31 @@ bool SSIDSearch(void) {
       return false;
     }
   }
+}
+
+void ZoneSearch(void) {
+  Serial.println("Start Zone search from EEPROM");
+  // Read EEPROM for SSID and Password
+  Serial.println("Reading Zone from EEPROM");
+  for (int i = 100; i < 116; ++i) {
+    zone += char(EEPROM.read(i));
+  }
+  Serial.print("Zone: ");
+  Serial.println(zone);
+
+  Serial.println("Reading Appliance Type from EEPROM");
+  for (int i = 116; i < 132; ++i) {
+    appl_type += char(EEPROM.read(i));
+  }
+  Serial.print("Appliance Type: ");
+  Serial.println(appl_type);
+
+  Serial.println("Reading Appliance Name from EEPROM");
+  for (int i = 132; i < 148; ++i) {
+    appl_name += char(EEPROM.read(i));
+  }
+  Serial.print("Appliance Name: ");
+  Serial.println(appl_name);
 }
 
 bool TestWifi(void) {
@@ -203,7 +225,7 @@ void MDNSService(void) {
   //   the fully-qualified domain name is "esp8266.local"
   // - second argument is the IP address to advertise
   //   we send our IP address on the WiFi network
-  if (!MDNS.begin("esp8266"),WiFi.localIP()) {
+  if (!MDNS.begin("esp8266", WiFi.localIP())) {
     Serial.println("Error setting up MDNS responder!");
     return;
   }
@@ -294,15 +316,13 @@ void WebService(bool webtype) {
       Serial.println("");
 
       Serial.println("writing eeprom ssid:");
-      for (int i = 0; i < qssid.length(); ++i)
-      {
+      for (int i = 0; i < qssid.length(); ++i) {
         EEPROM.write(i, qssid[i]);
         Serial.print("Wrote: ");
         Serial.println(qssid[i]);
       }
       Serial.println("writing eeprom pass:");
-      for (int i = 0; i < qpass.length(); ++i)
-      {
+      for (int i = 0; i < qpass.length(); ++i) {
         EEPROM.write(32 + i, qpass[i]);
         Serial.print("Wrote: ");
         Serial.println(qpass[i]);
@@ -314,8 +334,7 @@ void WebService(bool webtype) {
       s += "<p> saved to EEPROM... System will reboot in 10 seconds";
       reboot_flag = true;
     }
-    else
-    {
+    else {
       s = "HTTP/1.1 404 Not Found\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
       s += "<h1>404</h1><h3>Page Not Found</h3>";
       Serial.println("Sending 404");
@@ -371,13 +390,6 @@ void WebService(bool webtype) {
         NotificationBroadcast(which_plug, state);
       }
 
-      if (DEBUG) {
-        Serial.print("which plug is ");
-        Serial.println(which_plug);
-        Serial.print("State is ");
-        Serial.println(state);
-      }
-
       // Prepare the response
       if (state >= 0) {
         s += "PLUG ";
@@ -410,12 +422,62 @@ void WebService(bool webtype) {
         s += "Invalid Request.<br> Try /plug/<1to4>/<0or1>, or /plug/read.";
       }
     }
+    else if (req == "/getappliance")
+    {
+      s += "Hello from Wi-Plug </br>";
+      s += "Please fill";
+      s += "<form method='get' action='appl'><label>Zone: </label><input name='zone' length=15><label>Appliance Type: </label><input name='appl_type' length=15><label>Appliance Name: </lable><input name='appl_name' length=15><input type='submit'></form>";
+
+      Serial.println("Sending 200");
+    }
+    else if ( req.startsWith("/appl?zone=") ) {
+      // /appl?zone=hall&appl_type=bulb&appl_name=user-name
+      Serial.println("clearing eeprom");
+      for (int i = 100; i < 150; ++i) {
+        EEPROM.write(i, 0);
+      }
+      zone = req.substring(11, req.indexOf('&'));
+      Serial.println(zone);
+      Serial.println("");
+      
+      appl_type = req.substring(req.indexOf('=') + 1);
+      Serial.println(appl_type);
+      Serial.println("");
+      
+      appl_name = req.substring(req.lastIndexOf('=') + 1);
+      Serial.println(appl_name);
+      Serial.println("");
+
+      Serial.println("writing eeprom Zone:");
+      for (int i = 0; i < zone.length(); ++i) {
+        EEPROM.write(100 + i, zone[i]);
+        Serial.print("Wrote: ");
+        Serial.println(zone[i]);
+      }
+      Serial.println("writing eeprom Appl_type:");
+      for (int i = 0; i < appl_type.length(); ++i) {
+        EEPROM.write(116 + i, appl_type[i]);
+        Serial.print("Wrote: ");
+        Serial.println(appl_type[i]);
+      }
+      Serial.println("writing eeprom Appl_name:");
+      for (int i = 0; i < appl_name.length(); ++i) {
+        EEPROM.write(132 + i, appl_name[i]);
+        Serial.print("Wrote: ");
+        Serial.println(appl_name[i]);
+      }
+      EEPROM.commit();
+      s += "Hello from ESP8266 ";
+      s += "Found ";
+      s += req;
+      s += "<p> saved to EEPROM...";
+    }
     else if ( req.startsWith("/factoryreset") ) {
       s += "Hello from Wi-Plug";
       s += "<p>Factory Resetting the device<p>";
       Serial.println("Sending 200");
       Serial.println("clearing eeprom");
-      for (int i = 0; i < 96; ++i) {
+      for (int i = 0; i < 155; ++i) {
         EEPROM.write(i, 0);
       }
       EEPROM.commit();
@@ -507,18 +569,16 @@ void Broadcast(void) {
   brdcast_msg += ":";
   brdcast_msg += software_version;
   brdcast_msg += "|";
-//  brdcast_msg += MAC_char;
-//  brdcast_msg += "|";
-//  brdcast_msg += ipStr;
-//  brdcast_msg += "|";
-  Serial.println(brdcast_msg);
+  //  brdcast_msg += MAC_char;
+  //  brdcast_msg += "|";
+  //  brdcast_msg += ipStr;
+  //  brdcast_msg += "|";
+  //Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
 }
 
 void NotificationBroadcast(int which_plug, int state) {
-  //IPAddress ip = WiFi.localIP();
-  //String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 
   // Building up the Notification message
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
@@ -540,7 +600,7 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += String(which_plug);
   notif_msg += "|";
   notif_msg += (state > 0) ? "ON|" : "OFF|";
-  Serial.println(notif_msg);
+  //Serial.println(notif_msg);
   Udp.write(notif_msg.c_str());
   Udp.endPacket();
 }
