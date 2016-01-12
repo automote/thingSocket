@@ -38,7 +38,7 @@
 #define NOTIFICATION_PORT 8000     // Port for notification broadcasts
 // For debugging interface
 #define DEBUG 1
-#define MAX_RETRIES 20
+#define MAX_RETRIES 20  // Max retries for checking wifi connection
 
 MDNSResponder mdns;
 // Create an instance of the Web server
@@ -195,6 +195,7 @@ bool TestWifi(void) {
   Serial.println("Waiting for Wi-Fi to connect");
   while ( retries < MAX_RETRIES ) {
     if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Connected");
       return true;
     }
     delay(500);
@@ -243,6 +244,10 @@ void WebServiceDaemon(bool webtype) {
     if (reboot_flag) {
       delay(10000);
       ESP.restart();
+    }
+    // reboot the device in AP mode if no configuration is done in 10 mins
+    if (count % 12000 == 0 && webtype) {
+      reboot_flag = 1;
     }
   }
 }

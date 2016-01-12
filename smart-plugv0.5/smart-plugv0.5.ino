@@ -36,9 +36,9 @@
 
 #define BROADCAST_PORT 8888   // Port for sending general broadcast messages
 #define NOTIFICATION_PORT 8000     // Port for notification broadcasts
-// For debugging interface
-#define DEBUG 1
-#define MAX_RETRIES 20
+
+#define DEBUG 1             // For debugging interface
+#define MAX_RETRIES 20      // Max retries for checking Wi-Fi connection
 
 MDNSResponder mdns;
 // Create an instance of the Web server
@@ -218,6 +218,10 @@ void WebServiceDaemon(bool webtype) {
     if (reboot_flag) {
       delay(10000);
       ESP.restart();
+    }
+    // reboot yourself after 10 mins in AP mode to prevent reconfiguring
+    if (count == 12000 && webtype) {
+      reboot_flag = 1;
     }
   }
 }
