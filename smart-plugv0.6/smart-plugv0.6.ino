@@ -485,6 +485,27 @@ void WebService(bool webtype) {
       for (int i = 0; i < 155; ++i) {
         EEPROM.write(i, 0);
       }
+      String qzone = "default";
+      Serial.println("writing eeprom Zone with default value");
+      for (int i = 0; i < zone.length(); ++i) {
+        EEPROM.write(100 + i, qzone[i]);
+        Serial.print("Wrote: ");
+        Serial.println(qzone[i]);
+      }
+      String qappl_type = "default";
+      Serial.println("writing eeprom Appl_type with default value");
+      for (int i = 0; i < appl_type.length(); ++i) {
+        EEPROM.write(116 + i, qappl_type[i]);
+        Serial.print("Wrote: ");
+        Serial.println(qappl_type[i]);
+      }
+      String qappl_name = "default";
+      Serial.println("writing eeprom Appl_name:");
+      for (int i = 0; i < appl_name.length(); ++i) {
+        EEPROM.write(132 + i, qappl_name[i]);
+        Serial.print("Wrote: ");
+        Serial.println(qappl_name[i]);
+      }
       EEPROM.commit();
       reboot_flag = true;
     }
@@ -574,17 +595,22 @@ void Broadcast(void) {
   brdcast_msg += ":";
   brdcast_msg += software_version;
   brdcast_msg += "|";
-  //  brdcast_msg += MAC_char;
-  //  brdcast_msg += "|";
-  //  brdcast_msg += ipStr;
-  //  brdcast_msg += "|";
-  //Serial.println(brdcast_msg);
+  brdcast_msg += zone;
+  brdcast_msg += "|";
+  brdcast_msg += appl_type;
+  brdcast_msg += "|";
+  brdcast_msg += appl_name;
+  brdcast_msg += "|";
+//  brdcast_msg += MAC_char;
+//  brdcast_msg += "|";
+//  brdcast_msg += ipStr;
+//  brdcast_msg += "|";
+  Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
 }
 
 void NotificationBroadcast(int which_plug, int state) {
-
   // Building up the Notification message
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
   String notif_msg = "thingTronics|";
@@ -598,6 +624,7 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += appl_type;
   notif_msg += "|";
   notif_msg += appl_name;
+  notif_msg += "|";
   //notif_msg += MAC_char;
   //notif_msg += "|";
   //notif_msg += ipStr;
@@ -605,7 +632,7 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += String(which_plug);
   notif_msg += "|";
   notif_msg += (state > 0) ? "ON|" : "OFF|";
-  //Serial.println(notif_msg);
+  Serial.println(notif_msg);
   Udp.write(notif_msg.c_str());
   Udp.endPacket();
 }
