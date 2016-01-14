@@ -20,7 +20,11 @@
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *  server_ip is the IP address of the ESP8266 module, will be 
  *  printed to Serial when the module is connected.
- *  The cpmplete project can be cloned @ https://github.com/automote/thingSocket.git
+ *  The complete project can be cloned @ https://github.com/automote/thingSocket.git
+ *  
+ *  This example code is in the public domain.
+ *  modified 14 Jan 2016
+ *  by Lovelesh Patel
  */
  
 #include <ESP8266WiFi.h>

@@ -54,3 +54,18 @@ The hardware is kept simple and has been designed in Eagle for anyone to use the
 		<li>For ESP Extremists, they can flash NodeMCU firmware and start coding in Lua. Example codes will be provided soon</li>
 	</ul>
 </p>
+
+# Bugs
+Code contains bugs some of which are critical while others are non critical
+<p>
+	<ul>
+		<li>Critical:</li>
+		<ol>
+			<li>while submitting the SSID and password the URL doesnot encode spacial characters</li>
+		</ol>
+		<li>Non-Critical:</li>
+		<ol>
+			<li>Previous SSID and password still remains in memory even after factory reset</li>
+		</ol>
+	</ul>
+</p>

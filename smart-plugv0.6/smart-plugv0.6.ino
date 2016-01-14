@@ -1,5 +1,5 @@
 /*
- *  This sketch is the source code for Wi-Plug.
+ *  This sketch is the source code for thngSocket.
  *  The sketch will search for SSID and Password in EEPROM and
  *  tries to connect to the AP using the SSID and Password.
  *  If it fails then it boots into AP mode and asks for SSID and Password from the user
@@ -20,7 +20,11 @@
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *  server_ip is the IP address of the ESP8266 module, will be
  *  printed to Serial when the module is connected.
- *  The cpmplete project can be cloned @ https://github.com/automote/smart-plug.git
+ *  The complete project can be cloned @ https://github.com/automote/thingSocket.git
+ *
+ *  This example code is in the public domain.
+ *  modified 14 Jan 2016
+ *  by Lovelesh Patel
  */
 
 #include <ESP8266WiFi.h>
