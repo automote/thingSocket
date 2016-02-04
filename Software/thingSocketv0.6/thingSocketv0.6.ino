@@ -3,7 +3,7 @@
  *  The sketch will search for SSID and Password in EEPROM and
  *  tries to connect to the AP using the SSID and Password.
  *  If it fails then it boots into AP mode and asks for SSID and Password from the user
- *  API for AP (SSID = Wi-Plug)
+ *  API for AP (SSID = thingSocket)
  *    http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
  *  A webpage is also provided for entering SSID and Password if you are using the browser method.
  *  The server will set a GPIO pin depending on the request
@@ -18,11 +18,14 @@
  *    http://server_ip/plug/4/1 will set the GPIO15 high
  *    http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device.
  *    http://server_ip/reboot will reboot the device after 10 seconds
+ *    http://server_ip/setappliance will set the appliance location, type and name
  *  server_ip is the IP address of the ESP8266 module, will be
  *  printed to Serial when the module is connected.
  *  The complete project can be cloned @ https://github.com/automote/thingSocket.git
  *
- *  This example code is in the public domain.
+ *  Inspired by:
+ *  https://github.com/chriscook8/esp-arduino-apboot
+ *  This example code is under GPL v3.
  *  modified 14 Jan 2016
  *  by Lovelesh Patel
  */
@@ -54,7 +57,7 @@ const char* hardware_version = "v0.5";
 const char* software_version = "v0.6";
 
 // Global Variable
-const char* ssid = "thingSocket";
+const char* APssid = "thingSocket";
 String st;
 String zone, appl_type, appl_name;
 uint8_t MAC_array[6];
@@ -67,6 +70,21 @@ bool reboot_flag = false;
 
 // Create an instance of the UDP server
 WiFiUDP Udp;
+
+// Function Declaration
+void InitHardware(void);
+void BroadcastSetup(void);
+bool SSIDSearch(void);
+void ZoneSearch(void);
+bool TestWifi(void);
+void WebServiceInit(void);
+void MDNSService(void);
+void WebServiceDaemon(bool webtype);
+void WebService(bool webtype);
+void SetupAP(void);
+void Broadcast(void);
+void NotificationBroadcast(int which_plug, int state);
+void urlDecode(char *src);
 
 void setup() {
   bool AP_required = false;
@@ -301,7 +319,7 @@ void WebService(bool webtype) {
     {
       IPAddress ip = WiFi.softAPIP();
       String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-      s += "Hello from Wi-Plug at ";
+      s += "Hello from thingSocket at ";
       s += ipStr;
       s += "<p>";
       s += st;
@@ -317,10 +335,18 @@ void WebService(bool webtype) {
       }
       String qssid;
       qssid = req.substring(8, req.indexOf('&'));
+      char bssid[32];
+      qssid.toCharArray(bssid, qssid.length() + 1);
+      urlDecode(bssid);
+      qssid = String(bssid);
       Serial.println(qssid);
       Serial.println("");
       String qpass;
       qpass = req.substring(req.lastIndexOf('=') + 1);
+      char bpass[64];
+      qpass.toCharArray(bpass, qpass.length() + 1);
+      urlDecode(bpass);
+      qpass = String(bpass);
       Serial.println(qpass);
       Serial.println("");
 
@@ -337,7 +363,7 @@ void WebService(bool webtype) {
         Serial.println(qpass[i]);
       }
       EEPROM.commit();
-      s += "Hello from ESP8266 ";
+      s += "Hello from thingSocket ";
       s += "Found ";
       s += req;
       s += "<p> saved to EEPROM... System will reboot in 10 seconds";
@@ -352,7 +378,7 @@ void WebService(bool webtype) {
   else {
     if (req == "/")
     {
-      s += "Hello from Wi-Plug";
+      s += "Hello from thingSocket";
       s += "<p>";
       Serial.println("Sending 200");
     }
@@ -431,9 +457,9 @@ void WebService(bool webtype) {
         s += "Invalid Request.<br> Try /plug/<1to4>/<0or1>, or /plug/read.";
       }
     }
-    else if (req == "/getappliance")
+    else if (req == "/setappliance")
     {
-      s += "Hello from Wi-Plug </br>";
+      s += "Hello from thingSocket </br>";
       s += "Please fill";
       s += "<form method='get' action='appl'><label>Zone: </label><input name='zone' length=15><label>Appliance Type: </label><input name='appl_type' length=15><label>Appliance Name: </lable><input name='appl_name' length=15><input type='submit'></form>";
 
@@ -446,14 +472,27 @@ void WebService(bool webtype) {
         EEPROM.write(i, 0);
       }
       zone = req.substring(11, req.indexOf('&'));
+      char qzone[16];
+      zone.toCharArray(qzone, zone.length() + 1);
+      urlDecode(qzone);
+      zone = String(qzone);
       Serial.println(zone);
       Serial.println("");
-      
-      appl_type = req.substring(req.indexOf('=') + 1);
+
+      appl_type = req.substring(req.indexOf('&') + 1, req.lastIndexOf('&'));
+      appl_type = appl_type.substring(req.indexOf('='));
+      char qappl_type[16];
+      appl_type.toCharArray(qappl_type, appl_type.length() + 1);
+      urlDecode(qappl_type);
+      appl_type = String(qappl_type);
       Serial.println(appl_type);
       Serial.println("");
-      
+
       appl_name = req.substring(req.lastIndexOf('=') + 1);
+      char qappl_name[16];
+      appl_name.toCharArray(qappl_name, appl_name.length() + 1);
+      urlDecode(qappl_name);
+      appl_name = String(qappl_name);
       Serial.println(appl_name);
       Serial.println("");
 
@@ -476,13 +515,13 @@ void WebService(bool webtype) {
         Serial.println(appl_name[i]);
       }
       EEPROM.commit();
-      s += "Hello from ESP8266 ";
+      s += "Hello from thingSocket ";
       s += "Found ";
       s += req;
       s += "<p> saved to EEPROM...";
     }
     else if ( req.startsWith("/factoryreset") ) {
-      s += "Hello from Wi-Plug";
+      s += "Hello from thingSocket";
       s += "<p>Factory Resetting the device<p>";
       Serial.println("Sending 200");
       Serial.println("clearing eeprom");
@@ -514,7 +553,7 @@ void WebService(bool webtype) {
       reboot_flag = true;
     }
     else if ( req.startsWith("/reboot")) {
-      s += "Rebooting Wi-Plug";
+      s += "Rebooting thingSocket";
       Serial.println("Sending 200");
       reboot_flag = true;
     }
@@ -577,7 +616,7 @@ void SetupAP(void) {
   }
   st += "</ul>";
   delay(100);
-  WiFi.softAP(ssid);
+  WiFi.softAP(APssid);
   Serial.println("Initiating Soft AP");
   Serial.println("");
   WebServiceInit();
@@ -593,7 +632,8 @@ void Broadcast(void) {
   bcast[3] = 255;
   // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
-  String brdcast_msg = "thingTronics|";
+  String brdcast_msg;
+  brdcast_msg += "thingTronics|";
   brdcast_msg += "thingSocket|";
   brdcast_msg += hardware_version;
   brdcast_msg += ":";
@@ -605,19 +645,21 @@ void Broadcast(void) {
   brdcast_msg += "|";
   brdcast_msg += appl_name;
   brdcast_msg += "|";
-//  brdcast_msg += MAC_char;
-//  brdcast_msg += "|";
-//  brdcast_msg += ipStr;
-//  brdcast_msg += "|";
+  //  brdcast_msg += MAC_char;
+  //  brdcast_msg += "|";
+  //  brdcast_msg += ipStr;
+  //  brdcast_msg += "|";
   Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
+  delay(10);
   Udp.endPacket();
 }
 
 void NotificationBroadcast(int which_plug, int state) {
   // Building up the Notification message
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
-  String notif_msg = "thingTronics|";
+  String notif_msg;
+  notif_msg += "thingTronics|";
   notif_msg += "thingSocket|";
   notif_msg += hardware_version;
   notif_msg += ":";
@@ -638,5 +680,51 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += (state > 0) ? "ON|" : "OFF|";
   Serial.println(notif_msg);
   Udp.write(notif_msg.c_str());
+  delay(10);
   Udp.endPacket();
+}
+
+/**
+ * Perform URL percent decoding.
+ * Decoding is done in-place and will modify the parameter.
+ */
+void urlDecode(char *src) {
+  char *dst = src;
+  while (*src) {
+    if (*src == '+') {
+      src++;
+      *dst++ = ' ';
+    }
+    else if (*src == '%') {
+      // handle percent escape
+      *dst = '\0';
+      src++;
+      if (*src >= '0' && *src <= '9') {
+        *dst = *src++ - '0';
+      }
+      else if (*src >= 'A' && *src <= 'F') {
+        *dst = 10 + *src++ - 'A';
+      }
+      else if (*src >= 'a' && *src <= 'f') {
+        *dst = 10 + *src++ - 'a';
+      }
+      // this will cause %4 to be decoded to ascii @, but %4 is invalid
+      // and we can't be expected to decode it properly anyway
+      *dst <<= 4;
+      if (*src >= '0' && *src <= '9') {
+        *dst |= *src++ - '0';
+      }
+      else if (*src >= 'A' && *src <= 'F') {
+        *dst |= 10 + *src++ - 'A';
+      }
+      else if (*src >= 'a' && *src <= 'f') {
+        *dst |= 10 + *src++ - 'a';
+      }
+      dst++;
+    }
+    else {
+      *dst++ = *src++;
+    }
+  }
+  *dst = '\0';
 }

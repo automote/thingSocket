@@ -12,10 +12,13 @@ thingSocket is an attempt to promote IoT by providing open and hackable devices 
 We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the crowd favourite ESP8266 modules and we are planning to keep the hardware and software design open. This would encourage school and college students and even IoT enthusiasts to get into the IoT Bandwagon.
 </p>
 
-# Software
+## Software
 <p>
 The software is completely written in <b>Arduino IDE</b>, so anyone familiar with the IDE can tinker with the code and personalise the device according to his taste.
-The Algorithmic flow chart is mentioned in "flow-chart.png"
+The Algorithmic flow chart is mentioned below:
+<p align="center">
+<img width="60%" height="600px" src="https://github.com/automote/thingSocket/blob/master/flow-chart.png" />
+</p>
 
 <p>
 While in AP mode SSID and Password shoud be given using the following API
@@ -43,6 +46,7 @@ Other functionality include
 	<ul>
 		<li>http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device</li>
 		<li>http://server_ip/reboot will reboot the device after 10 seconds</li>
+		<li>http://server_ip/setappliance will set the appliance location, type and name</li>
 	</ul>
 where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed to Serial when the module is connected.
 * v0.5 is the standalone version
@@ -50,7 +54,7 @@ where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed 
 * other sketches are the modules which were used in the v0.5
 </p>
 
-# Hardware
+## Hardware
 The hardware is kept simple and has been designed in Eagle for anyone to use the schematic and board files to develop his own product. We are even planing to provide GERBER files once we ready with the Design. 
 <p>
 	<ul>
@@ -60,7 +64,7 @@ The hardware is kept simple and has been designed in Eagle for anyone to use the
 	</ul>
 </p>
 
-# Bugs
+### Bugs
 Code contains bugs some of which are critical while others are non critical
 <p>
 	<ul>
@@ -71,6 +75,8 @@ Code contains bugs some of which are critical while others are non critical
 		<li>Non-Critical:</li>
 		<ol>
 			<li>Previous SSID and password still remains in memory even after factory reset</li>
+			<li><strike>multicast packets are not broken into separate packets</strike></li>
+			<li><strike>string of appl_type is not getting parsed properly</strike></li>
 		</ol>
 	</ul>
 </p>

@@ -1,9 +1,9 @@
 /*
- *  This sketch is the source code for thingSocket.
- *  The sketch will search for SSID and Password in EEPROM and 
- *  tries to connect to the AP using the SSID and Password. 
+ *  This sketch is the source code for thngSocket.
+ *  The sketch will search for SSID and Password in EEPROM and
+ *  tries to connect to the AP using the SSID and Password.
  *  If it fails then it boots into AP mode and asks for SSID and Password from the user
- *  API for AP (SSID = thingSocket) 
+ *  API for AP (SSID = thingSocket)
  *    http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
  *  A webpage is also provided for entering SSID and Password if you are using the browser method.
  *  The server will set a GPIO pin depending on the request
@@ -18,21 +18,26 @@
  *    http://server_ip/plug/4/1 will set the GPIO15 high
  *    http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device.
  *    http://server_ip/reboot will reboot the device after 10 seconds
- *  server_ip is the IP address of the thingSocket module, will be 
+ *    http://server_ip/setappliance will set the appliance location, type and name
+ *  server_ip is the IP address of the thingSocket module, will be
  *  printed to Serial when the module is connected.
  *  The complete project can be cloned @ https://github.com/automote/thingSocket.git
- *  
+ *
  *  Inspired by:
- *  https://github.com/chriscook8/esp-arduino-apboot 
+ *  https://github.com/chriscook8/esp-arduino-apboot
  *  This example code is under GPL v3.
  *  modified 14 Jan 2016
  *  by Lovelesh Patel
  */
- 
+
+#include <FS.h>             // this needs to be the first include file,
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <WiFiClient.h>
-#include <EEPROM.h>
+#include <DNSServer.h>
+//#include <ESP8266mDNS.h>
+//#include <WiFiClient.h>
+//#include <EEPROM.h>
+#include <WiFiManager.h>    // https://github.com/tzapu/WiFiManager
+#include <ArduinoJson.h>    // https://github.com/bblanchon/ArduinoJson
 
 // GPIO 12,13,14,15 are smart plug GPIOs
 #define PLUG_1 14
@@ -42,50 +47,132 @@
 
 #define BROADCAST_PORT 8888   // Port for sending general broadcast messages
 #define NOTIFICATION_PORT 8000     // Port for notification broadcasts
+// For debugging interface
+#define DEBUG 1
+#define MAX_RETRIES 20  // Max retries for checking wifi connection
 
-#define DEBUG 1             // For debugging interface
-#define MAX_RETRIES 20      // Max retries for checking Wi-Fi connection
-
-MDNSResponder mdns;
+//MDNSResponder mdns;
 // Create an instance of the Web server
 // specify the port to listen on as an argument
-WiFiServer server(80);
+//WiFiServer server(80);
 
 // Global Constant
-const char* ssid = "thingSocket";
+// Define your defaults here, if there are different values in config.json, they will be overwritten
+const char* APssid = "thingSocket";
+const char* hardware_version = "v0.5";
+const char* software_version = "v0.7";
+const char* zone = "default";
+const char* appl_type = "default";
+const char* appl_name = "default";
 
 // Global Variable
 String st;
+//String zone, appl_type, appl_name;
 uint8_t MAC_array[6];
 char MAC_char[18];
-
-
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
 unsigned int count = 0;
 
-// Reboot flag for rebooting when required
-bool reboot_flag = false;
+// Reboot flag to reboot the device when necessary
+bool rebootFlag = false;
+bool saveConfig = false;
 
 // Create an instance of the UDP server
 WiFiUDP Udp;
 
+// The extra parameters to be configured (can be either global or just in the setup)
+// After connecting, parameter.getValue() will get you the configured value
+// id/name placeholder/prompt default length
+WiFiManagerParameter custom_zone("zone", "zone name", zone, 16);
+WiFiManagerParameter custom_appl_type("appl_type", "appliance type", appl_type, 16);
+WiFiManagerParameter custom_appl_names("appl_name", "appliance name", appl_name, 16);
+  
+//WiFiManager
+//Local intialization. Once its business is done, there is no need to keep it around
+WiFiManager wifiManager;
+
 void setup() {
+  bool configFound = false;
   bool AP_required = false;
   // Initialise the hardware
   InitHardware();
 
   // Setting up the broadcast service
   BroadcastSetup();
+
+  configFound = ConfigSearch();
+  
+  
+
+  //set config save notify callback
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+  //add all your parameters here
+  wifiManager.addParameter(&custom_zone);
+  wifiManager.addParameter(&custom_appl_type);
+  wifiManager.addParameter(&custom_appl_name);
+
+  //reset settings - for testing
+  wifiManager.resetSettings();
+
+  //set minimu quality of signal so it ignores AP's under that quality
+  //defaults to 8%
+  wifiManager.setMinimumSignalQuality();
+  
+  //sets timeout until configuration portal gets turned off
+  //useful to make it all retry or go to sleep
+  //in seconds
+  wifiManager.setTimeout(600);
+
+  //fetches ssid and pass and tries to connect
+  //if it does not connect it starts an access point with the specified name
+  //here  "AutoConnectAP"
+  //and goes into a blocking loop awaiting configuration
+  if (!wifiManager.autoConnect("AutoConnectAP", "password")) {
+    Serial.println("failed to connect and hit timeout");
+    delay(3000);
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(5000);
+  }
+
+  //if you get here you have connected to the WiFi
+  Serial.println("connected...yeey :)");
+  
+  //read updated parameters
+  zone = custom_zone.getValue();
+  appl_type = custom_appl_type.getValue();
+  appl_name = custom_appl_name.getValue();
+
+  //save the custom parameters to FS
+  if (shouldSaveConfig) {
+    Serial.println("saving config");
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& json = jsonBuffer.createObject();
+    json["zone"] = zone;
+    json["appl_type"] = appl_type;
+    json["appl_name"] = appl_name;
+
+    File configFile = SPIFFS.open("/config.json", "w");
+    if (!configFile) {
+      Serial.println("failed to open config file for writing");
+    }
+    json.print2To(Serial);
+    json.printTo(configFile);
+    configFile.close();
+    //end save
+  }
   
   // Search for SSID and password from the EEPROM first and try to connect to AP
   AP_required = !SSIDSearch();
+  ZoneSearch();
 
   // If it fails then make yourself AP and ask for SSID and password from user
   if (AP_required) {
     SetupAP();
-   }
-   // Initialise the webserver for direct initialization
-   WebServiceInit();
+  }
+  // Initialise the webserver for direct initialization
+  WebServiceInit();
 }
 
 void loop() {
@@ -138,21 +225,62 @@ void BroadcastSetup(void) {
   Udp.begin(NOTIFICATION_PORT);
 }
 
+bool ConfigSearch(void) {
+  // clean FS, for testing
+  SPIFFS.format();
+
+  // read configuration from FS json
+  Serial.println("mounting FS...");
+
+  if (SPIFFS.begin()) {
+    Serial.println("FS mounted");
+    if (SPIFFS.exists("/config.json")) {
+      //file exists, reading and loading
+      Serial.println("reading config file");
+      File configFile = SPIFFS.open("/config.json", "r");
+      if (configFile) {
+        Serial.println("opened config file");
+        size_t size = configFile.size();
+        // Allocate a buffer to store contents of the file.
+        std::unique_ptr<char[]> buf(new char[size]);
+
+        configFile.readBytes(buf.get(), size);
+        StaticJsonBuffer<200> jsonBuffer;
+        JsonObject& json = jsonBuffer.parseObject(buf.get());
+        json.printTo(Serial);
+        if (json.success()) {
+          Serial.println("\nparsed json");
+
+          zone = json["zone"];
+          appl_type = json["appl_type"];
+          appl_name = json["appl_name"];
+        } 
+        else {
+          Serial.println("failed to load json config");
+        }
+      }
+    }
+    return true;
+  } 
+  else {
+    Serial.println("failed to mount FS");
+    return false;
+  }
+}
+
 bool SSIDSearch(void) {
   Serial.println("Start SSID search from EEPROM");
   // Read EEPROM for SSID and Password
   Serial.println("Reading SSID from EEPROM");
   String essid;
-  for (int i = 0; i < 32; ++i)
-  {
+  for (int i = 0; i < 32; ++i) {
     essid += char(EEPROM.read(i));
   }
   Serial.print("SSID: ");
   Serial.println(essid);
   Serial.println("Reading Password from EEPROM");
   String epass = "";
-  for (int i = 32; i < 96; ++i)
-  {
+  for (int i = 32; i < 96; ++i) {
     epass += char(EEPROM.read(i));
   }
   Serial.print("PASS: ");
@@ -171,11 +299,37 @@ bool SSIDSearch(void) {
   }
 }
 
+void ZoneSearch(void) {
+  Serial.println("Start Zone search from EEPROM");
+  // Read EEPROM for SSID and Password
+  Serial.println("Reading Zone from EEPROM");
+  for (int i = 100; i < 116; ++i) {
+    zone += char(EEPROM.read(i));
+  }
+  Serial.print("Zone: ");
+  Serial.println(zone);
+
+  Serial.println("Reading Appliance Type from EEPROM");
+  for (int i = 116; i < 132; ++i) {
+    appl_type += char(EEPROM.read(i));
+  }
+  Serial.print("Appliance Type: ");
+  Serial.println(appl_type);
+
+  Serial.println("Reading Appliance Name from EEPROM");
+  for (int i = 132; i < 148; ++i) {
+    appl_name += char(EEPROM.read(i));
+  }
+  Serial.print("Appliance Name: ");
+  Serial.println(appl_name);
+}
+
 bool TestWifi(void) {
   int retries = 0;
   Serial.println("Waiting for Wi-Fi to connect");
   while ( retries < MAX_RETRIES ) {
     if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Connected");
       return true;
     }
     delay(500);
@@ -206,7 +360,7 @@ void MDNSService(void) {
   //   the fully-qualified domain name is "esp8266.local"
   // - second argument is the IP address to advertise
   //   we send our IP address on the WiFi network
-  if (!MDNS.begin("esp8266"),WiFi.localIP()) {
+  if (!MDNS.begin("esp8266", WiFi.localIP())) {
     Serial.println("Error setting up MDNS responder!");
     return;
   }
@@ -225,8 +379,8 @@ void WebServiceDaemon(bool webtype) {
       delay(10000);
       ESP.restart();
     }
-    // reboot yourself after 10 mins in AP mode to prevent reconfiguring
-    if (count == 12000 && webtype) {
+    // reboot the device in AP mode if no configuration is done in 10 mins
+    if (count % 12000 == 0 && webtype) {
       reboot_flag = 1;
     }
   }
@@ -293,23 +447,29 @@ void WebService(bool webtype) {
       }
       String qssid;
       qssid = req.substring(8, req.indexOf('&'));
+      char bssid[32];
+      qssid.toCharArray(bssid, qssid.length() + 1);
+      urlDecode(bssid);
+      qssid = String(bssid);
       Serial.println(qssid);
       Serial.println("");
       String qpass;
       qpass = req.substring(req.lastIndexOf('=') + 1);
+      char bpass[64];
+      qpass.toCharArray(bpass, qpass.length() + 1);
+      urlDecode(bpass);
+      qpass = String(bpass);
       Serial.println(qpass);
       Serial.println("");
 
       Serial.println("writing eeprom ssid:");
-      for (int i = 0; i < qssid.length(); ++i)
-      {
+      for (int i = 0; i < qssid.length(); ++i) {
         EEPROM.write(i, qssid[i]);
         Serial.print("Wrote: ");
         Serial.println(qssid[i]);
       }
       Serial.println("writing eeprom pass:");
-      for (int i = 0; i < qpass.length(); ++i)
-      {
+      for (int i = 0; i < qpass.length(); ++i) {
         EEPROM.write(32 + i, qpass[i]);
         Serial.print("Wrote: ");
         Serial.println(qpass[i]);
@@ -321,10 +481,9 @@ void WebService(bool webtype) {
       s += "<p> saved to EEPROM... System will reboot in 10 seconds";
       reboot_flag = true;
     }
-    else
-    {
+    else {
       s = "HTTP/1.1 404 Not Found\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
-      s += "<h1>404</h1>Page Not Found";
+      s += "<h1>404</h1><h3>Page Not Found</h3>";
       Serial.println("Sending 404");
     }
   }
@@ -378,13 +537,6 @@ void WebService(bool webtype) {
         NotificationBroadcast(which_plug, state);
       }
 
-      if (DEBUG) {
-        Serial.print("which plug is ");
-        Serial.println(which_plug);
-        Serial.print("State is ");
-        Serial.println(state);
-      }
-
       // Prepare the response
       if (state >= 0) {
         s += "PLUG ";
@@ -417,13 +569,97 @@ void WebService(bool webtype) {
         s += "Invalid Request.<br> Try /plug/<1to4>/<0or1>, or /plug/read.";
       }
     }
+    else if (req == "/setappliance")
+    {
+      s += "Hello from thingSocket </br>";
+      s += "Please fill";
+      s += "<form method='get' action='appl'><label>Zone: </label><input name='zone' length=15><label>Appliance Type: </label><input name='appl_type' length=15><label>Appliance Name: </lable><input name='appl_name' length=15><input type='submit'></form>";
+
+      Serial.println("Sending 200");
+    }
+    else if ( req.startsWith("/appl?zone=") ) {
+      // /appl?zone=hall&appl_type=bulb&appl_name=user-name
+      Serial.println("clearing eeprom");
+      for (int i = 100; i < 150; ++i) {
+        EEPROM.write(i, 0);
+      }
+      zone = req.substring(11, req.indexOf('&'));
+      char qzone[16];
+      zone.toCharArray(qzone, zone.length() + 1);
+      urlDecode(qzone);
+      zone = String(qzone);
+      Serial.println(zone);
+      Serial.println("");
+
+      appl_type = req.substring(req.indexOf('&') + 1, req.lastIndexOf('&'));
+      appl_type = appl_type.substring(req.indexOf('='));
+      char qappl_type[16];
+      appl_type.toCharArray(qappl_type, appl_type.length() + 1);
+      urlDecode(qappl_type);
+      appl_type = String(qappl_type);
+      Serial.println(appl_type);
+      Serial.println("");
+
+      appl_name = req.substring(req.lastIndexOf('=') + 1);
+      char qappl_name[16];
+      appl_name.toCharArray(qappl_name, appl_name.length() + 1);
+      urlDecode(qappl_name);
+      appl_name = String(qappl_name);
+      Serial.println(appl_name);
+      Serial.println("");
+
+      Serial.println("writing eeprom Zone:");
+      for (int i = 0; i < zone.length(); ++i) {
+        EEPROM.write(100 + i, zone[i]);
+        Serial.print("Wrote: ");
+        Serial.println(zone[i]);
+      }
+      Serial.println("writing eeprom Appl_type:");
+      for (int i = 0; i < appl_type.length(); ++i) {
+        EEPROM.write(116 + i, appl_type[i]);
+        Serial.print("Wrote: ");
+        Serial.println(appl_type[i]);
+      }
+      Serial.println("writing eeprom Appl_name:");
+      for (int i = 0; i < appl_name.length(); ++i) {
+        EEPROM.write(132 + i, appl_name[i]);
+        Serial.print("Wrote: ");
+        Serial.println(appl_name[i]);
+      }
+      EEPROM.commit();
+      s += "Hello from thingSocket ";
+      s += "Found ";
+      s += req;
+      s += "<p> saved to EEPROM...";
+    }
     else if ( req.startsWith("/factoryreset") ) {
       s += "Hello from thingSocket";
       s += "<p>Factory Resetting the device<p>";
       Serial.println("Sending 200");
       Serial.println("clearing eeprom");
-      for (int i = 0; i < 96; ++i) {
+      for (int i = 0; i < 155; ++i) {
         EEPROM.write(i, 0);
+      }
+      String qzone = "default";
+      Serial.println("writing eeprom Zone with default value");
+      for (int i = 0; i < zone.length(); ++i) {
+        EEPROM.write(100 + i, qzone[i]);
+        Serial.print("Wrote: ");
+        Serial.println(qzone[i]);
+      }
+      String qappl_type = "default";
+      Serial.println("writing eeprom Appl_type with default value");
+      for (int i = 0; i < appl_type.length(); ++i) {
+        EEPROM.write(116 + i, qappl_type[i]);
+        Serial.print("Wrote: ");
+        Serial.println(qappl_type[i]);
+      }
+      String qappl_name = "default";
+      Serial.println("writing eeprom Appl_name:");
+      for (int i = 0; i < appl_name.length(); ++i) {
+        EEPROM.write(132 + i, qappl_name[i]);
+        Serial.print("Wrote: ");
+        Serial.println(qappl_name[i]);
       }
       EEPROM.commit();
       reboot_flag = true;
@@ -492,7 +728,7 @@ void SetupAP(void) {
   }
   st += "</ul>";
   delay(100);
-  WiFi.softAP(ssid);
+  WiFi.softAP(APssid);
   Serial.println("Initiating Soft AP");
   Serial.println("");
   WebServiceInit();
@@ -508,33 +744,105 @@ void Broadcast(void) {
   bcast[3] = 255;
   // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
-  String brdcast_msg = "thingTronics|";
+  String brdcast_msg;
+  brdcast_msg += "thingTronics|";
   brdcast_msg += "thingSocket|";
-  // Include MAC and IP in broadcast service if required
-//  brdcast_msg += MAC_char;
-//  brdcast_msg += "|";
-//  brdcast_msg += ipStr;
-//  brdcast_msg += "|";
+  brdcast_msg += hardware_version;
+  brdcast_msg += ":";
+  brdcast_msg += software_version;
+  brdcast_msg += "|";
+  brdcast_msg += zone;
+  brdcast_msg += "|";
+  brdcast_msg += appl_type;
+  brdcast_msg += "|";
+  brdcast_msg += appl_name;
+  brdcast_msg += "|";
+  //  brdcast_msg += MAC_char;
+  //  brdcast_msg += "|";
+  //  brdcast_msg += ipStr;
+  //  brdcast_msg += "|";
   Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
+  delay(10);
   Udp.endPacket();
 }
 
 void NotificationBroadcast(int which_plug, int state) {
-  
   // Building up the Notification message
   Udp.beginPacket(bcast, NOTIFICATION_PORT);
-  String notif_msg = "thingTronics|";
+  String notif_msg;
+  notif_msg += "thingTronics|";
   notif_msg += "thingSocket|";
-  // Include MAC and IP in notification service if required
-//notif_msg += MAC_char;
-//notif_msg += "|";
-//notif_msg += ipStr;
-//notif_msg += "|";
+  notif_msg += hardware_version;
+  notif_msg += ":";
+  notif_msg += software_version;
+  notif_msg += "|";
+  notif_msg += zone;
+  notif_msg += "|";
+  notif_msg += appl_type;
+  notif_msg += "|";
+  notif_msg += appl_name;
+  notif_msg += "|";
+  //notif_msg += MAC_char;
+  //notif_msg += "|";
+  //notif_msg += ipStr;
+  //notif_msg += "|";
   notif_msg += String(which_plug);
   notif_msg += "|";
   notif_msg += (state > 0) ? "ON|" : "OFF|";
   Serial.println(notif_msg);
   Udp.write(notif_msg.c_str());
+  delay(10);
   Udp.endPacket();
 }
+
+/**
+ * Perform URL percent decoding.
+ * Decoding is done in-place and will modify the parameter.
+ */
+void urlDecode(char *src) {
+  char *dst = src;
+  while (*src) {
+    if (*src == '+') {
+      src++;
+      *dst++ = ' ';
+    }
+    else if (*src == '%') {
+      // handle percent escape
+      *dst = '\0';
+      src++;
+      if (*src >= '0' && *src <= '9') {
+        *dst = *src++ - '0';
+      }
+      else if (*src >= 'A' && *src <= 'F') {
+        *dst = 10 + *src++ - 'A';
+      }
+      else if (*src >= 'a' && *src <= 'f') {
+        *dst = 10 + *src++ - 'a';
+      }
+      // this will cause %4 to be decoded to ascii @, but %4 is invalid
+      // and we can't be expected to decode it properly anyway
+      *dst <<= 4;
+      if (*src >= '0' && *src <= '9') {
+        *dst |= *src++ - '0';
+      }
+      else if (*src >= 'A' && *src <= 'F') {
+        *dst |= 10 + *src++ - 'A';
+      }
+      else if (*src >= 'a' && *src <= 'f') {
+        *dst |= 10 + *src++ - 'a';
+      }
+      dst++;
+    }
+    else {
+      *dst++ = *src++;
+    }
+  }
+  *dst = '\0';
+}
+
+void SaveConfigCallback(void) {
+  Serial.println("Save config file to flash");
+  saveConfig = true;
+}
+
