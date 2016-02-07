@@ -41,8 +41,8 @@
 #define PLUG_3 13
 #define PLUG_4 15
 
-#define BROADCAST_PORT 8888   // Port for sending general broadcast messages
-#define NOTIFICATION_PORT 8000     // Port for notification broadcasts
+#define BROADCAST_PORT 5000   // Port for sending general broadcast messages
+#define NOTIFICATION_PORT 5002     // Port for notification broadcasts
 // For debugging interface
 #define DEBUG 1
 #define MAX_RETRIES 20  // Max retries for checking wifi connection
@@ -638,12 +638,6 @@ void Broadcast(void) {
   brdcast_msg += hardware_version;
   brdcast_msg += ":";
   brdcast_msg += software_version;
-  brdcast_msg += "|";
-  brdcast_msg += zone;
-  brdcast_msg += "|";
-  brdcast_msg += appl_type;
-  brdcast_msg += "|";
-  brdcast_msg += appl_name;
   brdcast_msg += "|";
   //  brdcast_msg += MAC_char;
   //  brdcast_msg += "|";

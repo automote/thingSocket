@@ -1,0 +1,37 @@
+Partlist exported from C:/Users/home/Documents/GitHub/hardware/wifi/gerb-pcbpower/esp.sch at 1/22/2016 1:38 PM
+
+Part       Value     Device                    Package               Description                                             
+4PINHEADER           M04-V                     OUPIIN-4071V-4        Oupiin 4071 Series: 4 Pin Male                          
+C1         1uf       CAP0603-CAP               0603-CAP              Capacitor                                               
+C2         0.1uf     CAP_POLSMD                VISHAY_C              Capacitor Polarized                                     
+HENLV      3V3 REG   HENLV3.3                  HENLV3.3PKG           JUMPER                                                  
+JP1                  M03SCREW                  SCREWTERMINAL-3.5MM-3 Header 3                                                
+LED                  M02                       02P                   AMP QUICK CONNECTOR                                     
+LED1                 LEDCHIPLED_0805           CHIPLED_0805          LED                                                     
+MDL1                 ESP8266-12EESP8266-ESP12E ESP8266-ESP12E        ESP8266-12E with additional I/O and GPIO04/05 corrected 
+MODE                 SWITCH-SPSTSMD2           SWITCH-SPDT-SMD       SPST Switch                                             
+R1         12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R2         12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R3         12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R4         12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R5         12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R6         470e      RESISTOR0603-RES          0603-RES              Resistor                                                
+R7         12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R8         NC        RESISTOR0603-RES          0603-RES              Resistor                                                
+R9         470e      RESISTOR0603-RES          0603-RES              Resistor                                                
+R10        12k       RESISTOR0603-RES          0603-RES              Resistor                                                
+R11        10k       RESISTOR0603-RES          0603-RES              Resistor                                                
+RESET                TL3302-J                  TL3303_J              E-Switch TL3302 Series Tactile Switch                   
+SWITCH               M02                       02P                   AMP QUICK CONNECTOR                                     
+TP1        TPPAD1-17 TPPAD1-17                 P1-17                 Test pad                                                
+TP2        TPPAD1-17 TPPAD1-17                 P1-17                 Test pad                                                
+TP3        TPPAD1-17 TPPAD1-17                 P1-17                 Test pad                                                
+TP4        TP-040    TP-040                    TP-040                TEST POINT                                              
+TP5        TP-040    TP-040                    TP-040                TEST POINT                                              
+TP6        TP-040    TP-040                    TP-040                TEST POINT                                              
+TP7        TP-040    TP-040                    TP-040                TEST POINT                                              
+TP8        TP-040    TP-040                    TP-040                TEST POINT                                              
+TP9        TP-040    TP-040                    TP-040                TEST POINT                                              
+TP10       TP-040    TP-040                    TP-040                TEST POINT                                              
+TP11       TP-040    TP-040                    TP-040                TEST POINT                                              
+TRIAC                JP2Q                      JP2Q                  JUMPER                                                  
