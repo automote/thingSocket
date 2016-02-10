@@ -1,12 +1,12 @@
 # thingSocket
-<b>thingSocket</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
+__thingSocket__ is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
 
-<b>thingSocket</b> is an attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs, sockets, presence detectors and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
+__thingSocket__ is an attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs, sockets, presence detectors and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
 
 We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the crowd favourite ESP8266 modules and we are planning to keep the hardware and software design open. This would encourage school and college students and even IoT enthusiasts to get into the IoT Bandwagon.
 
 ## Software
-The software is completely written in <b>Arduino IDE</b>, so anyone familiar with the IDE can tinker with the code and personalise the device according to his taste.
+The software is completely written in __Arduino IDE__, so anyone familiar with the IDE can tinker with the code and personalise the device according to his taste.
 The Algorithmic flow chart is mentioned below:
 <p align="center">
 <img width="60%" height="600px" src="https://github.com/automote/thingSocket/blob/master/flow-chart.png" />
