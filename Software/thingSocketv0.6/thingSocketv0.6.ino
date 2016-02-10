@@ -41,8 +41,8 @@
 #define PLUG_3 13
 #define PLUG_4 15
 
-#define BROADCAST_PORT 8888   // Port for sending general broadcast messages
-#define NOTIFICATION_PORT 8000     // Port for notification broadcasts
+#define BROADCAST_PORT 5000   // Port for sending general broadcast messages
+#define NOTIFICATION_PORT 5002     // Port for notification broadcasts
 // For debugging interface
 #define DEBUG 1
 #define MAX_RETRIES 20  // Max retries for checking wifi connection
@@ -248,7 +248,7 @@ void MDNSService(void) {
   //   the fully-qualified domain name is "esp8266.local"
   // - second argument is the IP address to advertise
   //   we send our IP address on the WiFi network
-  if (!MDNS.begin("esp8266", WiFi.localIP())) {
+  if (!MDNS.begin("thingSocket", WiFi.localIP())) {
     Serial.println("Error setting up MDNS responder!");
     return;
   }
