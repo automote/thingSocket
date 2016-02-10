@@ -11,12 +11,12 @@ The Algorithmic flow chart is mentioned below:
 <p align="center">
 <img width="60%" height="600px" src="https://github.com/automote/thingSocket/blob/master/flow-chart.png" />
 
-While in AP mode SSID and Password shoud be given using the following API
+While in __AP__ mode SSID and Password shoud be given using the following API
 - http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
 
 A webpage is also provided for entering SSID and Password if you are using the browser method.	
 
-The ESP in thingSocket acts as Webserver on port 80 and has the following APIs
+The ESP in thingSocket acts as Webserver on port 80 and has the following __APIs__
 
 The server will set a GPIO pin depending upon the request
 - http://server_ip/plug/read will read all the status of all the GPIOs used
@@ -42,7 +42,7 @@ where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed 
 
 
 ## Hardware
-The hardware is kept simple and has been designed in Eagle for anyone to use the schematic and board files to develop his own product. We are even planing to provide GERBER files once we ready with the Design. 
+The hardware is kept simple and has been designed in Eagle for anyone to use the schematic and board files to develop his own product. We are even planing to provide __GERBER__ files once we ready with the Design. 
 
 - For Geeks, they can directly buy the hardware from us or can make their own device
 - For Tinkerers, UART pins are provided to flash the code of their choice or improve upon the already existing code
