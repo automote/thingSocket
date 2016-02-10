@@ -248,7 +248,7 @@ void MDNSService(void) {
   //   the fully-qualified domain name is "esp8266.local"
   // - second argument is the IP address to advertise
   //   we send our IP address on the WiFi network
-  if (!MDNS.begin("esp8266", WiFi.localIP())) {
+  if (!MDNS.begin("thingSocket", WiFi.localIP())) {
     Serial.println("Error setting up MDNS responder!");
     return;
   }
@@ -638,6 +638,12 @@ void Broadcast(void) {
   brdcast_msg += hardware_version;
   brdcast_msg += ":";
   brdcast_msg += software_version;
+  brdcast_msg += "|";
+  brdcast_msg += zone;
+  brdcast_msg += "|";
+  brdcast_msg += appl_type;
+  brdcast_msg += "|";
+  brdcast_msg += appl_name;
   brdcast_msg += "|";
   //  brdcast_msg += MAC_char;
   //  brdcast_msg += "|";

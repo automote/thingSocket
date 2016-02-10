@@ -1,13 +1,8 @@
 # thingSocket
-
-<b>thingSocket</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
-
-thingSocket is am attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs and sockets and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
-
 <p>
 <b>thingSocket</b> is a Wi-Fi enabled socket/plug coupled with open APIs for people to develop, deploy or even clone.
 
-thingSocket is an attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs, sockets, presence detectors and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
+<b>thingSocket</b> is an attempt to promote IoT by providing open and hackable devices that you use everyday. Devices like bulbs, sockets, presence detectors and many more. The idea revolves around identifying frequently accessed devices and converting them into IoT devices by adding Wi-Fi, BLE or ZigBee capabilities.
 
 We are starting with a Wi-Fi Socket and a Wi-Fi Bulb. These devices have the crowd favourite ESP8266 modules and we are planning to keep the hardware and software design open. This would encourage school and college students and even IoT enthusiasts to get into the IoT Bandwagon.
 </p>
@@ -27,7 +22,7 @@ While in AP mode SSID and Password shoud be given using the following API
 	</ul>
 A webpage is also provided for entering SSID and Password if you are using the browser method.	
 </p>
-The ESP in Wi-Plug acts as Webserver on port 80 and has the following APIs
+The ESP in thingSocket acts as Webserver on port 80 and has the following APIs
 </p>
 <p>
 The server will set a GPIO pin depending upon the request
@@ -51,7 +46,9 @@ Other functionality include
 where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed to Serial when the module is connected.
 * v0.5 is the standalone version
 * v0.6 is currently developed version
-* other sketches are the modules which were used in the v0.5
+* other sketches are the modules which were used in the v0.5 and v0.6
+* v0.7 is in developement which makes use of Wi-Fi Manager by <i>tzapu</i> https://github.com/tzapu/WiFiManager
+
 </p>
 
 ## Hardware
@@ -80,3 +77,6 @@ Code contains bugs some of which are critical while others are non critical
 		</ol>
 	</ul>
 </p>
+
+#### Inspiration
+- http://www.esp8266.com/viewtopic.php?f=29&t=2520
