@@ -36,7 +36,7 @@ Other functionality include
 
 where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed to Serial when the module is connected.
 - v0.5 is the standalone version
--v0.6 is currently developed version
+- v0.6 is currently developed version
 - other sketches are the modules which were used in the v0.5 and v0.6
 - v0.7 is in developement which makes use of Wi-Fi Manager by <i>tzapu</i> https://github.com/tzapu/WiFiManager
 
