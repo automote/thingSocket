@@ -52,6 +52,7 @@ The hardware is kept simple and has been designed in Eagle for anyone to use the
 Code contains bugs some of which are critical while others are non critical
 - Critical:
   - ~~while submitting the SSID and password the URL doesnot encode spacial characters~~
+  - GPIO status is nots stored in case of power cut
    
 - Non-Critical:
   - Previous SSID and password still remains in memory even after factory reset
