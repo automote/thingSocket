@@ -8,8 +8,8 @@
  *  A webpage is also provided for entering SSID and Password if you are using the browser method.
  *  The server will set a GPIO14 pin depending on the request
  *    http://server_ip/plug/read will read all the plug status,
- *    http://server_ip/plug/0 will set the GPIO14 low,
- *    http://server_ip/plug/1 will set the GPIO14 high
+ *    http://server_ip/plug/on will set the GPIO14 low,
+ *    http://server_ip/plug/off will set the GPIO14 high
  *    http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device.
  *    http://server_ip/reboot will reboot the device after 10 seconds
  *    http://server_ip/setappliance will set the appliance location, type and name
@@ -29,11 +29,13 @@
 #include <WiFiClient.h>
 #include <EEPROM.h>
 
-// GPIO 14 connected to Socket
+// GPIO14 connected to Socket, GPIO4 to switch, GPIO5 to switch LED
+// GPIO16 is for status
 #define PLUG 14
-#define LED 9
 #define CONNECT 16
-#define SWITCH 10
+#define LED 5
+#define SWITCH 4
+
 #define BROADCAST_PORT 5000   // Port for sending general broadcast messages
 #define NOTIFICATION_PORT 5002     // Port for notification broadcasts
 
@@ -78,7 +80,9 @@ void WebService(bool webtype);
 void SetupAP(void);
 void Broadcast(void);
 void NotificationBroadcast(int which_plug, int state);
-void urlDecode(char *src);
+void UrlDecode(char *src);
+void UpdateSwitchLED(int state);
+void SwitchState(void);
 
 void setup() {
   bool AP_required = false;
@@ -107,6 +111,10 @@ void loop() {
     Serial.println("checking wifi connection");
     reboot_flag = !TestWifi();
   }
+
+  // Checks the status if the switch
+  SwitchState();
+  
   // Serving the requests from the client
   WebService(0);
   if (reboot_flag) {
@@ -124,9 +132,17 @@ void InitHardware(void) {
   Serial.println();
   Serial.println("Setting up the Hardware");
 
-  // prepare GPIO14 to control the socket
+  // prepare PLUG to control the socket i.e. GPIO14
   pinMode(PLUG, OUTPUT);
   digitalWrite(PLUG, LOW);
+
+  // prepare the CONNECT LED i.e. GPIO16
+  pinMode(CONNECT, OUTPUT);
+  digitalWrite(CONNECT, HIGH);
+
+  // prepare the SWITCH and LED i.e. GPIO4 and GPIO5
+  pinMode(SWITCH, INPUT);
+  pinMode(LED, OUTPUT);
   
   // Get the mac address of the ESP module
   WiFi.macAddress(MAC_array);
@@ -202,10 +218,12 @@ void ZoneSearch(void) {
 
 bool TestWifi(void) {
   int retries = 0;
+  WiFi.mode(WIFI_STA);
   Serial.println("Waiting for Wi-Fi to connect");
   while ( retries < MAX_RETRIES ) {
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("Connected");
+      digitalWrite(CONNECT, LOW);
       return true;
     }
     delay(500);
@@ -213,6 +231,7 @@ bool TestWifi(void) {
     retries++;
   }
   Serial.println("Connect timed out");
+  digitalWrite(CONNECT, HIGH);
   return false;
 }
 
@@ -325,7 +344,7 @@ void WebService(bool webtype) {
       qssid = req.substring(8, req.indexOf('&'));
       char bssid[32];
       qssid.toCharArray(bssid, qssid.length() + 1);
-      urlDecode(bssid);
+      UrlDecode(bssid);
       qssid = String(bssid);
       Serial.println(qssid);
       Serial.println("");
@@ -333,7 +352,7 @@ void WebService(bool webtype) {
       qpass = req.substring(req.lastIndexOf('=') + 1);
       char bpass[64];
       qpass.toCharArray(bpass, qpass.length() + 1);
-      urlDecode(bpass);
+      UrlDecode(bpass);
       qpass = String(bpass);
       Serial.println(qpass);
       Serial.println("");
@@ -374,11 +393,11 @@ void WebService(bool webtype) {
       if (req == "/plug/read") {
         state = -2;
       }
-      else if (req == "/plug/0") {
+      else if (req == "/plug/off") {
         which_plug = PLUG;
         state = 0;
       }
-      else if (req == "/plug/1") {
+      else if (req == "/plug/on") {
         which_plug = PLUG;
         state = 1;
       }
@@ -386,19 +405,21 @@ void WebService(bool webtype) {
       // Set the plugs according to the request
       if (state >= 0) {
         digitalWrite(which_plug, state);
+        // Update the status of switch LED
+        UpdateSwitchLED(state);
         NotificationBroadcast(which_plug, state);
       }
 
       // Prepare the response
       if (state >= 0) {
         s += "PLUG ";
-        s += String(which_plug);
+        //s += String(which_plug);
         s += " is now ";
         s += (state > 0) ? "ON" : "OFF";
       }
       else if (state == -2) {
         s += "Plug ";
-        s += PLUG;
+        //s += PLUG;
         s += " = ";
         s += String(digitalRead(PLUG));
       }
@@ -423,7 +444,7 @@ void WebService(bool webtype) {
       zone = req.substring(11, req.indexOf('&'));
       char qzone[16];
       zone.toCharArray(qzone, zone.length() + 1);
-      urlDecode(qzone);
+      UrlDecode(qzone);
       zone = String(qzone);
       Serial.println(zone);
       Serial.println("");
@@ -432,7 +453,7 @@ void WebService(bool webtype) {
       appl_type = appl_type.substring(req.indexOf('='));
       char qappl_type[16];
       appl_type.toCharArray(qappl_type, appl_type.length() + 1);
-      urlDecode(qappl_type);
+      UrlDecode(qappl_type);
       appl_type = String(qappl_type);
       Serial.println(appl_type);
       Serial.println("");
@@ -440,7 +461,7 @@ void WebService(bool webtype) {
       appl_name = req.substring(req.lastIndexOf('=') + 1);
       char qappl_name[16];
       appl_name.toCharArray(qappl_name, appl_name.length() + 1);
-      urlDecode(qappl_name);
+      UrlDecode(qappl_name);
       appl_name = String(qappl_name);
       Serial.println(appl_name);
       Serial.println("");
@@ -637,7 +658,7 @@ void NotificationBroadcast(int which_plug, int state) {
  * Perform URL percent decoding.
  * Decoding is done in-place and will modify the parameter.
  */
-void urlDecode(char *src) {
+void UrlDecode(char *src) {
   char *dst = src;
   while (*src) {
     if (*src == '+') {
@@ -677,3 +698,20 @@ void urlDecode(char *src) {
   }
   *dst = '\0';
 }
+
+void UpdateSwitchLED(int state)
+{
+  digitalWrite(LED, state);
+}
+
+void SwitchState(void)
+{
+  int cur_state;
+  cur_state = digitalRead(SWITCH);
+
+  if(cur_state != digitalRead(PLUG)){
+    digitalWrite(PLUG, cur_state);
+    UpdateSwitchLED(cur_state);
+  }
+}
+
