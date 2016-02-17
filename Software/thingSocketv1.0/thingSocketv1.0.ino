@@ -29,12 +29,12 @@
 #include <WiFiClient.h>
 #include <EEPROM.h>
 
-// GPIO14 connected to Socket, GPIO4 to switch, GPIO5 to switch LED
+// GPIO14 connected to Socket, GPIO5 to SWITCH, GPIO4 to SWITCH_LED
 // GPIO16 is for status
 #define PLUG 14
 #define CONNECT 16
-#define LED 5
-#define SWITCH 4
+#define SWITCH_LED 4
+#define SWITCH 5
 
 #define BROADCAST_PORT 5000   // Port for sending general broadcast messages
 #define NOTIFICATION_PORT 5002     // Port for notification broadcasts
@@ -60,6 +60,7 @@ uint8_t MAC_array[6];
 char MAC_char[18];
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
 unsigned int count = 0;
+volatile unsigned int num = 0;
 
 // Reboot flag to reboot the device when necessary
 bool reboot_flag = false;
@@ -77,12 +78,13 @@ void WebServiceInit(void);
 void MDNSService(void);
 void WebServiceDaemon(bool webtype);
 void WebService(bool webtype);
+void UpdatePlugNLED(int plug, int state);
 void SetupAP(void);
 void Broadcast(void);
 void NotificationBroadcast(int which_plug, int state);
 void UrlDecode(char *src);
-void UpdateSwitchLED(int state);
-void SwitchState(void);
+void pin_ISR(void);
+void myDelay(int);
 
 void setup() {
   bool AP_required = false;
@@ -113,7 +115,7 @@ void loop() {
   }
 
   // Checks the status if the switch
-  SwitchState();
+  
   
   // Serving the requests from the client
   WebService(0);
@@ -140,9 +142,14 @@ void InitHardware(void) {
   pinMode(CONNECT, OUTPUT);
   digitalWrite(CONNECT, HIGH);
 
-  // prepare the SWITCH and LED i.e. GPIO4 and GPIO5
+  // prepare the SWITCH and SWITCH_LED i.e. GPIO4 and GPIO5
   pinMode(SWITCH, INPUT);
-  pinMode(LED, OUTPUT);
+  pinMode(SWITCH_LED, OUTPUT);
+  digitalWrite(SWITCH_LED, HIGH);
+  attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
+  
+  // Set the thingSocket into STATION mode
+  WiFi.mode(WIFI_STA);
   
   // Get the mac address of the ESP module
   WiFi.macAddress(MAC_array);
@@ -404,10 +411,8 @@ void WebService(bool webtype) {
       
       // Set the plugs according to the request
       if (state >= 0) {
-        digitalWrite(which_plug, state);
-        // Update the status of switch LED
-        UpdateSwitchLED(state);
-        NotificationBroadcast(which_plug, state);
+        // Update the status of PLUG and SWITCH_LED
+        UpdatePlugNLED(which_plug, state);
       }
 
       // Prepare the response
@@ -593,9 +598,16 @@ void SetupAP(void) {
   WebServiceDaemon(1);
 }
 
+void UpdatePlugNLED(int plug, int state)
+{
+  digitalWrite(SWITCH_LED, !state);
+  digitalWrite(plug, state);
+  NotificationBroadcast(plug, state);
+}
+
 void Broadcast(void) {
   IPAddress ip = WiFi.localIP();
-  String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+//    String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
   for (int i = 0; i < 3; i++) {
     bcast[i] = ip[i];
   }
@@ -621,7 +633,6 @@ void Broadcast(void) {
   //  brdcast_msg += "|";
   Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
-  delay(10);
   Udp.endPacket();
 }
 
@@ -650,7 +661,6 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += (state > 0) ? "ON|" : "OFF|";
   Serial.println(notif_msg);
   Udp.write(notif_msg.c_str());
-  delay(10);
   Udp.endPacket();
 }
 
@@ -699,19 +709,26 @@ void UrlDecode(char *src) {
   *dst = '\0';
 }
 
-void UpdateSwitchLED(int state)
-{
-  digitalWrite(LED, state);
+
+
+void pin_ISR() {
+  detachInterrupt(digitalPinToInterrupt(SWITCH));
+  String s;
+  s += "ISR Called ";
+  s += String(num);
+  Serial.println(s);
+  num++;
+  
+  myDelay(250);
+  volatile int buttonState = digitalRead(SWITCH);
+  UpdatePlugNLED(PLUG, buttonState);
+  attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
 }
 
-void SwitchState(void)
-{
-  int cur_state;
-  cur_state = digitalRead(SWITCH);
-
-  if(cur_state != digitalRead(PLUG)){
-    digitalWrite(PLUG, cur_state);
-    UpdateSwitchLED(cur_state);
+void myDelay(int x)   {
+  for(int i=0; i<=x; i++)   
+  {
+    delayMicroseconds(1000);
   }
 }
 

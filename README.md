@@ -53,11 +53,13 @@ Code contains bugs some of which are critical while others are non critical
 - Critical:
   - ~~while submitting the SSID and password the URL doesnot encode spacial characters~~
   - PLUG status is not stored in case of power cut
+  - PLUG will remain off on restart
    
 - Non-Critical:
   - Previous SSID and password still remains in memory even after factory reset
   - ~~multicast packets are not broken into separate packets~~
   - ~~string of appl_type is not getting parsed properly~~
+  - ~~AP mode remains on in STA mode as well~~
 
 #### Inspiration
 - http://www.esp8266.com/viewtopic.php?f=29&t=2520
