@@ -38,7 +38,7 @@ where <I>server_ip</I> is the IP address of the ESP8266 module, will be printed 
 - v0.5 is the standalone version
 - v0.6 is currently developed version
 - other sketches are the modules which were used in the v0.5 and v0.6
-- v0.7 is in developement which makes use of Wi-Fi Manager by <i>tzapu</i> https://github.com/tzapu/WiFiManager
+- v0.7 is in development which makes use of Wi-Fi Manager by <i>tzapu</i> https://github.com/tzapu/WiFiManager
 
 
 ## Hardware
@@ -54,6 +54,7 @@ Code contains bugs some of which are critical while others are non critical
   - ~~while submitting the SSID and password the URL doesnot encode spacial characters~~
   - PLUG status is not stored in case of power cut
   - PLUG will remain off on restart
+  - After reboot broadcast and multicast packets have decreased length
    
 - Non-Critical:
   - Previous SSID and password still remains in memory even after factory reset
