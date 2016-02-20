@@ -33,6 +33,10 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
 
+#include "css.h"
+#include "webconfig.h"
+#include "password.h"
+
 // GPIO14 connected to Socket, GPIO5 to Switch, GPIO4 to SWITCH_LED
 // GPIO16 is for Wi-Fi status
 #define SOCKET 14
@@ -142,23 +146,28 @@ void setup() {
 }
 
 void loop() {
+  // Test WiFi connection every minute and set the reboot flag if necessary
   if (count % 1200 == 0) {
-    // Test WiFi connection every minute and set the reboot flag if necessary
     // count is incremented roughly every 50ms
     Serial.println("checking wifi connection");
     reboot_flag = !TestWifi();
   }
 
-  // Checks the status if the switch
-
+  // Send a broadcast packet every 5 sec
+  if (count % 100 == 0) {
+      Broadcast();
+  }
 
   // Serving the requests from the client
-  WebService(0);
+  server.handleClient();
   if (reboot_flag) {
     Serial.println("Rebooting device");
     delay(10000);
     ESP.restart();
   }
+
+  delay(50);
+  count++;
 }
 
 void InitHardware(void) {
@@ -325,20 +334,14 @@ void WebServiceDaemon(bool webtype) {
 }
 
 void WebService(bool webtype) {
+  webMode = webtype;
   // Match the request
   int which_socket = -1; // Selects the SOCKETS to use
   int state = -1; // Initial state
 
   // Check if a client has connected
-  WiFiClient client = server.available();
-  if (!client) {
-    if (count % 100 == 0) {
-      Broadcast();
-    }
-    delay(50);
-    count++;
-    return;
-  }
+  
+
   Serial.println("");
   Serial.println("New client");
 
@@ -347,73 +350,18 @@ void WebService(bool webtype) {
     delay(1);
   }
 
-  // Read the first line of HTTP request
-  String req = client.readStringUntil('\r');
+  switch(webtype) {
+    case 0;
+    // setup mode initiated. Request SSID and password
+      webMode = 0;
+      Serial.println(WiFi.softAPIP());
+      server.on("/", webHandleConfig);
+      server.on("/a", webHandleConfigSave);
+         
 
-  // First line of HTTP request looks like "GET /path HTTP/1.1"
-  // Retrieve the "/path" part by finding the spaces
-  int addr_start = req.indexOf(' ');
-  int addr_end = req.indexOf(' ', addr_start + 1);
-  if (addr_start == -1 || addr_end == -1) {
-    Serial.print("Invalid request: ");
-    Serial.println(req);
-    return;
-  }
-  req = req.substring(addr_start + 1, addr_end);
-  Serial.print("Request: ");
-  Serial.println(req);
-  client.flush();
-  String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
-  if (webtype) {
-    if (req == "/")
-    {
-      IPAddress ip = WiFi.softAPIP();
-      String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-      s += "Hello from thingSocket at ";
-      s += ipStr;
-      s += "<p>";
-      s += st;
-      s += "<form method='get' action='a'><label>SSID: </label><input name='ssid' length=32><input name='pass' length=64><input type='submit'></form>";
-
-      Serial.println("Sending 200");
+     break; 
     }
-    else if ( req.startsWith("/a?ssid=") ) {
-      // /a?ssid=blahhhh&pass=poooo
-      Serial.println("clearing eeprom");
-      for (int i = 0; i < 96; ++i) {
-        EEPROM.write(i, 0);
-      }
-
-      essid = req.substring(8, req.indexOf('&'));
-      char bssid[32];
-      essid.toCharArray(bssid, essid.length() + 1);
-      UrlDecode(bssid);
-      essid = String(bssid);
-      Serial.println(essid);
-      Serial.println("");
-      
-      epass = req.substring(req.lastIndexOf('=') + 1);
-      char bpass[64];
-      epass.toCharArray(bpass, epass.length() + 1);
-      UrlDecode(bpass);
-      epass = String(bpass);
-      Serial.println(qpass);
-      Serial.println("");
-
-      Serial.println("writing eeprom ssid:");
-      for (int i = 0; i < essid.length(); ++i) {
-        EEPROM.write(i, essid[i]);
-        Serial.print("Wrote: ");
-        Serial.println(essid[i]);
-      }
-      Serial.println("writing eeprom pass:");
-      for (int i = 0; i < epass.length(); ++i) {
-        EEPROM.write(32 + i, epass[i]);
-        Serial.print("Wrote: ");
-        Serial.println(epass[i]);
-      }
-      delay(10);
-      EEPROM.commit();
+    
       s += "Hello from thingSocket ";
       s += "Found ";
       s += req;
@@ -578,13 +526,6 @@ void WebService(bool webtype) {
       Serial.println("Sending 404");
     }
   }
-  s += "</html>\r\n\r\n";
-  client.print(s);
-  Serial.println("Client disconnected");
-
-  // The client will actually be disconnected
-  // when the function returns and 'client' object is detroyed
-  return;
 }
 
 void SetupAP(void) {
@@ -800,3 +741,98 @@ void CheckInitConfig(void)
   }
 }
 
+void webHandleConfig()
+{
+  IPAddress ip = WiFi.softAPIP();
+  String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+
+  String toSend = webconfig_html;
+  toSend.replace("$ssids", st);
+  //toSend.replace("$css", css_file);
+  server.send(200, "text/html", toSend);
+  Serial.println("Sending 200");
+}
+
+void cleanASCII(String &input) {
+  input.replace("%21","!");
+  input.replace("%22","\"");
+  input.replace("%23","#");
+  input.replace("%24","$");
+  input.replace("%25","%");
+  input.replace("%26","&");
+  input.replace("%27","'");
+  input.replace("%28","(");
+  input.replace("%29",")");
+  input.replace("%2A","*");
+  input.replace("%2B","+");
+  input.replace("%2C",",");
+  input.replace("%2D","-");
+  input.replace("%2E",".");
+  input.replace("%2F","/");
+  input.replace("%3A",":");
+  input.replace("%3B",";");
+  input.replace("%3C","<");
+  input.replace("%3D","=");
+  input.replace("%3E",">");
+  input.replace("%3F","?");
+  input.replace("%40","@");
+  input.replace("%5B","[");
+  input.replace("%5D","]");
+  input.replace("%5E","^");
+  input.replace("%5F","_");
+  input.replace("%60","`");
+  input.replace("%7B","{");
+  input.replace("%7C","|");
+  input.replace("%7D","}");
+  input.replace("%7E","~");
+  input.replace("%7F","");
+  input.replace("+", " ");  
+}
+
+void webHandleConfigSave () {
+  Serial.println("Sending webHandleConfigSave");
+  // /a?ssid=blahhhh&pass=poooo
+  if(server.arg("ssid") == "other") {
+    essid = server.arg("other");
+  } else {
+    essid = server.arg("ssid");
+  }
+
+  epass = server.arg("pass");
+
+  cleanASCII(essid);
+  Serial.println(essid);
+  cleanASCII(epass);
+  Serial.println(epass);
+      
+  EEPROM.begin(512);
+  delay(10);
+  Serial.println("clearing eeprom");
+  for (int i = 0; i < 96; ++i) {
+    EEPROM.write(i, 0);
+  }
+  delay(200);
+  EEPROM.commit();
+  EEPROM.end();
+     
+  EEPROM.begin(512);
+  delay(10);
+  Serial.println("writing eeprom ssid:");
+  for (int i = 0; i < essid.length(); ++i) {
+    EEPROM.write(i, essid[i]);
+    Serial.print("Wrote: ");
+    Serial.println(essid[i]);
+  }
+  Serial.println("writing eeprom pass:");
+  for (int i = 0; i < epass.length(); ++i) {
+    EEPROM.write(32 + i, epass[i]);
+    Serial.print("Wrote: ");
+    Serial.println(epass[i]);
+  }
+  delay(200);
+  EEPROM.commit();
+  EEPROM.end();
+
+  String toSend = "<p>Settings saved to memory. Clock will now restart and you can find it on your local WiFi network. <p>Please reconnect your phone to your WiFi network first</p>\r\n\r\n";
+  server.send(200, "text/html" , toSend);
+}
