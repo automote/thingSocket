@@ -64,6 +64,7 @@ volatile unsigned int num = 0;
 
 // Reboot flag to reboot the device when necessary
 bool reboot_flag = false;
+bool configure_flag = false;
 
 // Create an instance of the UDP server
 WiFiUDP Udp;
@@ -113,9 +114,6 @@ void loop() {
     Serial.println("checking wifi connection");
     reboot_flag = !TestWifi();
   }
-
-  // Checks the status if the switch
-  
   
   // Serving the requests from the client
   WebService(0);
@@ -296,7 +294,7 @@ void WebService(bool webtype) {
   // Check if a client has connected
   WiFiClient client = server.available();
   if (!client) {
-    if (count % 100 == 0) {
+    if (count % 300 == 0) {
       Broadcast();
     }
     delay(50);
@@ -494,6 +492,8 @@ void WebService(bool webtype) {
       s += "Found ";
       s += req;
       s += "<p> saved to EEPROM...";
+      configure_flag = true;
+      NotificationBroadcast(which_plug,state);
     }
     else if ( req.startsWith("/factoryreset") ) {
       s += "Hello from thingSocket";
@@ -631,9 +631,9 @@ void Broadcast(void) {
   //  brdcast_msg += "|";
   //  brdcast_msg += ipStr;
   //  brdcast_msg += "|";
-  Serial.println(brdcast_msg);
   Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
+  Serial.println(brdcast_msg);
 }
 
 void NotificationBroadcast(int which_plug, int state) {
@@ -656,12 +656,18 @@ void NotificationBroadcast(int which_plug, int state) {
   //notif_msg += "|";
   //notif_msg += ipStr;
   //notif_msg += "|";
-  notif_msg += String(which_plug);
-  notif_msg += "|";
-  notif_msg += (state > 0) ? "ON|" : "OFF|";
-  Serial.println(notif_msg);
+  if(configure_flag) {
+    notif_msg += "CONFIGURED|";
+    configure_flag = false;
+  }
+  else {
+    notif_msg += String(which_plug);
+    notif_msg += "|";
+    notif_msg += (state > 0) ? "ON|" : "OFF|";
+  }
   Udp.write(notif_msg.c_str());
   Udp.endPacket();
+  Serial.println(notif_msg);
 }
 
 /**
