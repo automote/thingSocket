@@ -330,8 +330,7 @@ void WebService(bool webtype) {
   client.flush();
   String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
   if (webtype) {
-    if (req == "/")
-    {
+    if (req == "/") {
       IPAddress ip = WiFi.softAPIP();
       String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
       s += "Hello from thingSocket at ";
@@ -391,8 +390,7 @@ void WebService(bool webtype) {
     }
   }
   else {
-    if (req == "/")
-    {
+    if (req == "/") {
       s += "Hello from thingSocket";
       s += "<p>";
       Serial.println("Sending 200");
@@ -433,8 +431,7 @@ void WebService(bool webtype) {
         s += "Invalid Request.<br> Try /plug/<0or1>, or /plug/read.";
       }
     }
-    else if (req == "/setappliance")
-    {
+    else if (req == "/setappliance") {
       s += "Hello from thingSocket </br>";
       s += "Please fill";
       s += "<form method='get' action='appl'><label>Zone: </label><input name='zone' length=15><label>Appliance Type: </label><input name='appl_type' length=15><label>Appliance Name: </lable><input name='appl_name' length=15><input type='submit'></form>";
@@ -535,8 +532,7 @@ void WebService(bool webtype) {
       Serial.println("Sending 200");
       reboot_flag = true;
     }
-    else
-    {
+    else {
       s = "HTTP/1.1 404 Not Found\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
       s += "<h1>404</h1>Page Not Found";
       Serial.println("Sending 404");
@@ -560,12 +556,10 @@ void SetupAP(void) {
   Serial.println("scan done");
   if (n == 0)
     Serial.println("no networks found");
-  else
-  {
+  else {
     Serial.print(n);
     Serial.println(" networks found");
-    for (int i = 0; i < n; ++i)
-    {
+    for (int i = 0; i < n; ++i) {
       // Print SSID and RSSI for each network found
       Serial.print(i + 1);
       Serial.print(": ");
@@ -579,8 +573,7 @@ void SetupAP(void) {
   }
   Serial.println("");
   st = "<ul>";
-  for (int i = 0; i < n; ++i)
-  {
+  for (int i = 0; i < n; ++i) {
     // Print SSID and RSSI for each network found
     st += "<li>";
     st += i + 1;
@@ -606,8 +599,7 @@ void SetupAP(void) {
   WebServiceDaemon(1);
 }
 
-void UpdatePlugNLED(int plug, int state)
-{
+void UpdatePlugNLED(int plug, int state) {
   digitalWrite(SWITCH_LED, !state);
   digitalWrite(plug, state);
   NotificationBroadcast(plug, state);
@@ -724,9 +716,8 @@ void pin_ISR() {
   attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
 }
 
-void myDelay(int x)   {
-  for(int i=0; i<=x; i++)   
-  {
+void myDelay(int x) {
+  for(int i=0; i<=x; i++) {
     delayMicroseconds(1000);
   }
 }
