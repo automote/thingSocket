@@ -49,12 +49,14 @@ MDNSResponder mdns;
 WiFiServer server(80);
 
 // Global Constant
+const char* company_name = "thingTronics";
 const char* hardware_version = "v1.0";
-const char* software_version = "v1.0";
+const char* software_version = "v1.1";
+const char APpsk[] = "12345678";
 
 // Global Variable
-const char* APssid = "thingSocket";
 String st;
+String hostName = "thingSocket-";
 String zone, appl_type, appl_name;
 uint8_t MAC_array[6];
 char MAC_char[18];
