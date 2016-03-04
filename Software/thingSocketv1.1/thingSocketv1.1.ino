@@ -3,7 +3,7 @@
  *  The sketch will search for SSID and Password in EEPROM and
  *  tries to connect to the AP using the SSID and Password.
  *  If it fails then it boots into AP mode and asks for SSID and Password from the user
- *  API for AP (SSID = thingSocket-<last 3 digits of MAC>)
+ *  API for AP (SSID = thingSocket-<last 3 digits of MAC> and PASSWORD = 12345678)
  *    http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
  *  A webpage is also provided for entering SSID and Password if you are using the browser method.
  *  The server will set a GPIO14 pin depending on the request
