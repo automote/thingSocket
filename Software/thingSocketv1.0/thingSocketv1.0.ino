@@ -51,7 +51,7 @@ WiFiServer server(80);
 // Global Constant
 const char* company_name = "thingTronics";
 const char* hardware_version = "v1.0";
-const char* software_version = "v1.1";
+const char* software_version = "v1.0";
 const char APpsk[] = "12345678";
 
 // Global Variable
@@ -593,7 +593,12 @@ void SetupAP(void) {
   }
   st += "</ul>";
   delay(100);
-  WiFi.softAP(APssid);
+  char APssid[hostName.length() + 1];
+  memset(APssid, 0, hostName.length() + 1);
+  for (int i = 0; i < hostName.length(); i++) {
+	APssid[i] = hostName.charAt(i);  
+  }
+  WiFi.softAP(APssid, APpsk);
   Serial.println("Initiating Soft AP");
   Serial.println("");
   WebServiceInit();
@@ -629,10 +634,6 @@ void Broadcast(void) {
   brdcast_msg += "|";
   brdcast_msg += appl_name;
   brdcast_msg += "|";
-  //  brdcast_msg += MAC_char;
-  //  brdcast_msg += "|";
-  //  brdcast_msg += ipStr;
-  //  brdcast_msg += "|";
   Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
   Serial.println(brdcast_msg);
@@ -654,10 +655,6 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += "|";
   notif_msg += appl_name;
   notif_msg += "|";
-  //notif_msg += MAC_char;
-  //notif_msg += "|";
-  //notif_msg += ipStr;
-  //notif_msg += "|";
   if(configure_flag) {
     notif_msg += "CONFIGURED|";
     configure_flag = false;

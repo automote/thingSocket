@@ -11,23 +11,17 @@ The Algorithmic flow chart is mentioned below:
 <p align="center">
 <img width="60%" height="600px" src="https://github.com/automote/thingSocket/blob/master/flow-chart.png" />
 
-While in __AP__ mode SSID and Password shoud be given using the following API
-- http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
+The sketch will search for SSID and Password in EEPROM and tries to connect to the AP using the SSID and Password. If it fails then it boots into AP mode and asks for SSID and Password from the user. Connect to the thingSocket using the following: (SSID = thingSocket-<last 3 digits of MAC> and PASSWORD = 12345678)
 
-A webpage is also provided for entering SSID and Password if you are using the browser method.	
+While in __AP__ mode SSID and Password shoud be given using the following API. A webpage is also provided for entering SSID and Password if you are using the browser method.
+- http://192.168.4.1/a?ssid="yourSSID"&pass="yourPSKkey"
 
 The ESP in thingSocket acts as Webserver on port 80 and has the following __APIs__
 
-The server will set a GPIO pin depending upon the request
-- http://server_ip/plug/read will read all the status of all the GPIOs used
-- http://server_ip/plug/1/0 will set the GPIO14 low
-- http://server_ip/plug/1/1 will set the GPIO14 high
-- http://server_ip/plug/2/0 will set the GPIO12 low
-- http://server_ip/plug/2/1 will set the GPIO12 high
-- http://server_ip/plug/3/0 will set the GPIO13 low
-- http://server_ip/plug/3/1 will set the GPIO13 high
-- http://server_ip/plug/4/0 will set the GPIO15 low
-- http://server_ip/plug/4/1 will set the GPIO15 high
+The server will set a GPIO14 pin depending on the request
+ - http://server_ip/plug/read will read all the plug status,
+ - http://server_ip/plug/on will set the GPIO14 low,
+ - http://server_ip/plug/off will set the GPIO14 high
 
 Other functionality include
 - http://server_ip/factoryreset will clear the EEPROM contents. Its serves the purpose of factory resetting the device

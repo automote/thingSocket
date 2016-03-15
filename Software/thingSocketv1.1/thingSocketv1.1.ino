@@ -428,7 +428,7 @@ void WebService(bool webtype) {
         s += String(digitalRead(PLUG));
       }
       else {
-        s += "Invalid Request.<br> Try /plug/<0or1>, or /plug/read.";
+        s += "Invalid Request<br> Try /plug/<'on' or 'off'>, or /plug/read";
       }
     }
     else if (req == "/setappliance") {
