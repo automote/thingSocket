@@ -1,0 +1,9 @@
+memory usage:
+
+0-31: ssid
+32-95: password
+100-115: zone
+116-131: appliance type
+132-147: applaince name
+
+251: magic byte
