@@ -53,6 +53,7 @@ const char* company_name = "thingTronics";
 const char* hardware_version = "v1.0";
 const char* software_version = "v1.1";
 const char APpsk[] = "12345678";
+const int resource_number = 0;
 
 // Global Variable
 String st;
@@ -115,7 +116,6 @@ void loop() {
     Serial.println("checking wifi connection");
     reboot_flag = !TestWifi();
   }
-  
   // Serving the requests from the client
   WebService(0);
   if (reboot_flag) {
@@ -624,7 +624,6 @@ void Broadcast(void) {
   brdcast_msg += ":";
   brdcast_msg += software_version;
   brdcast_msg += "|";
-  delay(1);
   Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
   Serial.println(brdcast_msg);
@@ -644,14 +643,13 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += "|";
   notif_msg += appl_name;
   notif_msg += "|";
-  notif_msg += "0";
+  notif_msg += String(resource_number);
   notif_msg += "|";
   notif_msg += (state > 0) ? "ON|" : "OFF|";
   if(configure_flag) {
     notif_msg += "CONFIGURED|";
     configure_flag = false;
   }
-  delay(1);
   Udp.write(notif_msg.c_str());
   Udp.endPacket();
   Serial.println(notif_msg);
@@ -721,4 +719,3 @@ void myDelay(int x) {
     delayMicroseconds(1000);
   }
 }
-
