@@ -425,7 +425,7 @@ void WebService(bool webtype) {
         s += "Plug ";
         //s += PLUG;
         s += " = ";
-        s += String(digitalRead(PLUG));
+        s += (digitalRead(PLUG) > 0) ? "ON" : "OFF";
       }
       else {
         s += "Invalid Request<br> Try /plug/<'on' or 'off'>, or /plug/read";
