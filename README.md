@@ -59,3 +59,7 @@ Code contains bugs some of which are critical while others are non critical
 
 #### Inspiration
 - http://www.esp8266.com/viewtopic.php?f=29&t=2520
+
+#### Alpha Version
+  - Alpha version is available for testing and verification
+People who are interested can contact Lovelesh: lovelesh06101990@gmail.com
