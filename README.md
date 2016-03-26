@@ -50,6 +50,7 @@ Code contains bugs some of which are critical while others are non critical
   - PLUG will remain off on restart
   - After reboot broadcast and multicast packets have decreased length
   - Watchdog timer setup to reset device if its in loop
+  - thingSocket not rebooting properly after connection lost with router
    
 - Non-Critical:
   - Previous SSID and password still remains in memory even after factory reset
