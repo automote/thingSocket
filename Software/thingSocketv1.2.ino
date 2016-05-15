@@ -142,7 +142,7 @@ void InitHardware(void) {
   digitalWrite(CONNECT, HIGH);
 
   // prepare the SWITCH and SWITCH_LED i.e. GPIO4 and GPIO5
-  pinMode(SWITCH, INPUT);
+  pinMode(SWITCH, INPUT_PULLUP);
   pinMode(SWITCH_LED, OUTPUT);
   digitalWrite(SWITCH_LED, digitalRead(PLUG));
   attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
@@ -600,7 +600,7 @@ void SetupAP(void) {
 }
 
 void UpdatePlugNLED(int plug, int state) {
-  digitalWrite(SWITCH_LED, !state);
+  digitalWrite(SWITCH_LED, state);
   digitalWrite(plug, state);
   NotificationBroadcast(plug, state);
 }
@@ -710,7 +710,7 @@ void pin_ISR() {
   
   myDelay(250);
   volatile int buttonState = digitalRead(SWITCH);
-  UpdatePlugNLED(PLUG, buttonState);
+  UpdatePlugNLED(PLUG, !buttonState);
   attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
 }
 

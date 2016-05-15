@@ -80,3 +80,7 @@ $RECYCLE.BIN/
 *.tmp
 *.rar
 *.zip
+*.s##
+*.lck
+*.s#1
+*.s#2
