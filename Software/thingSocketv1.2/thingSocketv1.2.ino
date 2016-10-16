@@ -81,7 +81,7 @@ void WebServiceInit(void);
 void MDNSService(void);
 void WebServiceDaemon(bool webtype);
 void WebService(bool webtype);
-void UpdatePlugNLED(int plug, int state);
+void UpdatePlugNLED(int plug, int value);
 void SetupAP(void);
 void Broadcast(void);
 void NotificationBroadcast(int which_plug, int state);
@@ -292,7 +292,7 @@ void WebServiceDaemon(bool webtype) {
 void WebService(bool webtype) {
   // Match the request
   int which_plug = -1; // Selects the plug to use
-  int state = -1; // Initial state
+  int value = -1; // Initial state
 
   // Check if a client has connected
   WiFiClient client = server.available();
@@ -337,12 +337,12 @@ void WebService(bool webtype) {
       s += ipStr;
       s += "<p>";
       s += st;
-      s += "<form method='get' action='a'><label>SSID: </label><input name='ssid' length=32><input name='pass' length=64><input type='submit'></form>";
+      s += "<form method='get' action='a'><label>SSID: </label><input name='ssid' length=32><input name='pass' length=64><input name='devicepassword' length=8><input type='submit'></form>";
 
       Serial.println("Sending 200");
     }
     else if ( req.startsWith("/a?ssid=") ) {
-      // /a?ssid=blahhhh&pass=poooo
+      // /a?ssid="SSID"&pass="PSK Key"&devicepassword=1234567
       Serial.println("clearing eeprom");
       for (int i = 0; i < 96; ++i) {
         EEPROM.write(i, 0);
@@ -355,15 +355,26 @@ void WebService(bool webtype) {
       qssid = String(bssid);
       Serial.println(qssid);
       Serial.println("");
-      String qpass;
-      qpass = req.substring(req.lastIndexOf('=') + 1);
+      
+	  String qpass;
+	  qpass = req.substring(req.indexOf('&'), req.lastIndexOf('&'));
+      qpass = qpass.substring(qpass.indexOf('=') + 1);
       char bpass[64];
       qpass.toCharArray(bpass, qpass.length() + 1);
       UrlDecode(bpass);
       qpass = String(bpass);
       Serial.println(qpass);
       Serial.println("");
-
+	  
+	  String qdevpass;
+	  qdevpass = req.substring(req.lastIndexOf('=') + 1);
+	  char bdevpass[8];
+      qdevpass.toCharArray(bdevpass, qdevpass.length() + 1);
+	  UrlDecode(bdevpass);
+	  qdevpass = String(bdevpass);
+	  Serial.println(qdevpass);
+	  Serial.println("");
+	  
       Serial.println("writing eeprom ssid:");
       for (int i = 0; i < qssid.length(); ++i) {
         EEPROM.write(i, qssid[i]);
@@ -395,41 +406,42 @@ void WebService(bool webtype) {
       s += "<p>";
       Serial.println("Sending 200");
     }
-    else if (req.startsWith("/plug")) {
-      if (req == "/plug/read") {
-        state = -2;
-      }
-      else if (req == "/plug/off") {
-        which_plug = PLUG;
-        state = 0;
-      }
-      else if (req == "/plug/on") {
-        which_plug = PLUG;
-        state = 1;
-      }
-      
-      // Set the plugs according to the request
-      if (state >= 0) {
-        // Update the status of PLUG and SWITCH_LED
-        UpdatePlugNLED(which_plug, state);
-      }
+	else if (req.startsWith("/resource")) {
+		s += "Hello from thingSocket </br>";
+		s += "<form method='get' action='/resource/set'><label>Resource No: </label><input name='res' length=2><label>Value: </label><input name='val' length=3><input type='submit'></form>";
+		value = -2;
+	  
+		if (req.startsWith("/resource/set?res=")) {
+			//resource/set?res=0&val=100
+			// No need to acquire argument as thingSocket has only 1 resource
+			// By Default res = 0
+			which_plug = PLUG;
 
-      // Prepare the response
-      if (state >= 0) {
-        s += "PLUG ";
-        //s += String(which_plug);
-        s += " is now ";
-        s += (state > 0) ? "ON" : "OFF";
-      }
-      else if (state == -2) {
-        s += "Plug ";
-        //s += PLUG;
-        s += " = ";
-        s += (digitalRead(PLUG) > 0) ? "ON" : "OFF";
-      }
-      else {
-        s += "Invalid Request<br> Try /plug/<'on' or 'off'>, or /plug/read";
-      }
+			// Getting value of resource
+			String val = req.substring(req.lastIndexOf('=') + 1);
+			value = val.toInt();
+			Serial.print("value of resource is ");
+			Serial.println(val);
+		}
+
+		// Prepare the response
+		if (value >= 0 && value <= 100) {
+			// Update the status of PLUG and SWITCH_LED
+			UpdatePlugNLED(which_plug, value);
+			s += "PLUG ";
+			//s += String(which_plug);
+			s += " is now ";
+			s += (value > 0) ? "ON" : "OFF";
+		}
+		else if (value == -2) {
+			s += "Plug ";
+			//s += PLUG;
+			s += " = ";
+			s += (digitalRead(PLUG) > 0) ? "ON" : "OFF";
+		}
+		else {
+			s += "Invalid Request<br> Try /resource/set?res=0&val=0|100|-2";
+		}
     }
     else if (req == "/setappliance") {
       s += "Hello from thingSocket </br>";
@@ -493,7 +505,7 @@ void WebService(bool webtype) {
       s += req;
       s += "<p> saved to EEPROM...";
       configure_flag = true;
-      NotificationBroadcast(which_plug,state);
+      NotificationBroadcast(which_plug,value);
     }
     else if ( req.startsWith("/factoryreset") ) {
       s += "Hello from thingSocket";
@@ -599,10 +611,13 @@ void SetupAP(void) {
   WebServiceDaemon(1);
 }
 
-void UpdatePlugNLED(int plug, int state) {
-  digitalWrite(SWITCH_LED, state);
-  digitalWrite(plug, state);
-  NotificationBroadcast(plug, state);
+void UpdatePlugNLED(int plug, int value) {
+  if (value != 0){
+	  value = 100;
+  }
+  digitalWrite(SWITCH_LED, value);
+  digitalWrite(plug, value);
+  NotificationBroadcast(plug, value);
 }
 
 void Broadcast(void) {
@@ -613,6 +628,7 @@ void Broadcast(void) {
   }
   bcast[3] = 255;
   
+  // thingTronics|thingSocket-ABCDEF|v0.1:v1.1|
   // Building up the Broadcast message
   Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg;
