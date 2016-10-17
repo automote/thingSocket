@@ -42,6 +42,7 @@
 // For debugging interface
 #define DEBUG 1
 #define MAX_RETRIES 20  // Max retries for checking wifi connection
+#define MAX_RESOURCES 1
 
 MDNSResponder mdns;
 // Create an instance of the Web server
@@ -54,7 +55,6 @@ const char* hardware_version = "v1.0";
 const char* software_version = "v1.1";
 const char APpsk[] = "12345678";
 const int resource_number = 0;
-const int totalResources = 1;
 
 // Global Variable
 String st;
@@ -63,7 +63,9 @@ String zone, appl_type, appl_name;
 String macID;
 static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP address
 unsigned int count = 0;
+#ifdef DEBUG
 volatile unsigned int num = 0;
+#endif
 
 // Reboot flag to reboot the device when necessary
 bool reboot_flag = false;
@@ -174,15 +176,21 @@ bool SSIDSearch(void) {
   for (int i = 0; i < 32; ++i) {
     essid += char(EEPROM.read(i));
   }
+#ifdef DEBUG
   Serial.print("SSID: ");
   Serial.println(essid);
   Serial.println("Reading Password from EEPROM");
+#endif
+
   String epass = "";
   for (int i = 32; i < 96; ++i) {
     epass += char(EEPROM.read(i));
   }
+#ifdef DEBUG
   Serial.print("PASS: ");
   Serial.println(epass);
+#endif
+
   if ( essid.length() > 1 ) {
     // Try to connect to AP with given SSID and Password
     WiFi.begin(essid.c_str(), epass.c_str());
@@ -204,22 +212,27 @@ void ZoneSearch(void) {
   for (int i = 100; i < 116; ++i) {
     zone += char(EEPROM.read(i));
   }
+#ifdef DEBUG
   Serial.print("Zone: ");
   Serial.println(zone);
+#endif
 
   Serial.println("Reading Appliance Type from EEPROM");
   for (int i = 116; i < 132; ++i) {
     appl_type += char(EEPROM.read(i));
   }
+#ifdef DEBUG
   Serial.print("Appliance Type: ");
   Serial.println(appl_type);
-
+#endif
   Serial.println("Reading Appliance Name from EEPROM");
   for (int i = 132; i < 148; ++i) {
     appl_name += char(EEPROM.read(i));
   }
+#ifdef DEBUG
   Serial.print("Appliance Name: ");
   Serial.println(appl_name);
+#endif
 }
 
 bool TestWifi(void) {
@@ -242,11 +255,12 @@ bool TestWifi(void) {
 }
 
 void WebServiceInit(void) {
-  Serial.println("");
+#ifdef DEBUG 
+ Serial.println("");
   Serial.println("Initializing Web Services");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.softAPIP());
-
+#endif
   // Starting web server
   server.begin();
   Serial.println("Server started");
@@ -322,12 +336,16 @@ void WebService(bool webtype) {
   int addr_end = req.indexOf(' ', addr_start + 1);
   if (addr_start == -1 || addr_end == -1) {
     Serial.print("Invalid request: ");
-    Serial.println(req);
+#ifdef DEBUG  
+  Serial.println(req);
+#endif
     return;
   }
   req = req.substring(addr_start + 1, addr_end);
+#ifdef DEBUG
   Serial.print("Request: ");
   Serial.println(req);
+#endif
   client.flush();
   String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>";
   if (webtype) {
@@ -354,9 +372,10 @@ void WebService(bool webtype) {
       qssid.toCharArray(bssid, qssid.length() + 1);
       UrlDecode(bssid);
       qssid = String(bssid);
-      Serial.println(qssid);
+#ifdef DEBUG      
+	  Serial.println(qssid);
       Serial.println("");
-      
+#endif
 	  String qpass;
 	  qpass = req.substring(req.indexOf('&'), req.lastIndexOf('&'));
       qpass = qpass.substring(qpass.indexOf('=') + 1);
@@ -364,35 +383,43 @@ void WebService(bool webtype) {
       qpass.toCharArray(bpass, qpass.length() + 1);
       UrlDecode(bpass);
       qpass = String(bpass);
-      Serial.println(qpass);
+#ifdef DEBUG      
+	  Serial.println(qpass);
       Serial.println("");
-	  
+#endif
 	  String qdevpass;
 	  qdevpass = req.substring(req.lastIndexOf('=') + 1);
 	  char bdevpass[8];
       qdevpass.toCharArray(bdevpass, qdevpass.length() + 1);
 	  UrlDecode(bdevpass);
 	  qdevpass = String(bdevpass);
+#ifdef DEBUG	  
 	  Serial.println(qdevpass);
 	  Serial.println("");
-	  
-      Serial.println("writing eeprom ssid:");
+#endif	  
+      Serial.println("writing ssid to EEPROM");
       for (int i = 0; i < qssid.length(); ++i) {
         EEPROM.write(i, qssid[i]);
+#ifdef DEBUG		
         Serial.print("Wrote: ");
         Serial.println(qssid[i]);
+#endif		
       }
       Serial.println("writing eeprom pass:");
       for (int i = 0; i < qpass.length(); ++i) {
         EEPROM.write(32 + i, qpass[i]);
+#ifdef DEBUG
         Serial.print("Wrote: ");
         Serial.println(qpass[i]);
+#endif		
       }
       EEPROM.commit();
       s += "Hello from thingSocket ";
+#ifdef DEBUG
       s += "Found ";
       s += req;
-      s += "<p> saved to EEPROM... System will reboot in 10 seconds";
+#endif	  
+      s += "<p> Details saved to EEPROM... System will reboot in 10 seconds";
       reboot_flag = true;
     }
     else {
@@ -421,8 +448,6 @@ void WebService(bool webtype) {
 			// Getting value of resource
 			String val = req.substring(req.lastIndexOf('=') + 1);
 			value = val.toInt();
-			Serial.print("value of resource is ");
-			Serial.println(val);
 		}
 
 		// Prepare the response
@@ -441,8 +466,9 @@ void WebService(bool webtype) {
 			value = (digitalRead(PLUG) > 0) ? 0 : 100;
 			s += String(value);
 			s += "<br>"; // Go to the next line.
-			Serial.println(value);
-
+#ifdef DEBUG
+			Serial.println(value); // Debug the value
+#endif
 			// Sent the queried resource via notification
 			NotificationBroadcast(which_plug, value);
 		}
@@ -469,44 +495,55 @@ void WebService(bool webtype) {
       zone.toCharArray(qzone, zone.length() + 1);
       UrlDecode(qzone);
       zone = String(qzone);
-      Serial.println(zone);
-        
+#ifdef DEBUG
+	  Serial.println(zone);
+#endif        
       char qappl_type[16];
       appl_type.toCharArray(qappl_type, appl_type.length() + 1);
       UrlDecode(qappl_type);
       appl_type = String(qappl_type);
-      Serial.println(appl_type);
-
+#ifdef DEBUG      
+	  Serial.println(appl_type);
+#endif
       appl_name = req.substring(req.lastIndexOf('=') + 1);
       char qappl_name[16];
       appl_name.toCharArray(qappl_name, appl_name.length() + 1);
       UrlDecode(qappl_name);
       Serial.println(appl_name);
-      appl_name = String(qappl_name);
-
+#ifdef DEBUG      
+	  appl_name = String(qappl_name);
+#endif
       Serial.println("writing eeprom Zone:");
       for (int i = 0; i < zone.length(); ++i) {
         EEPROM.write(100 + i, zone[i]);
-        Serial.print("Wrote: ");
+#ifdef DEBUG      
+		Serial.print("Wrote: ");
         Serial.println(zone[i]);
+#endif		
       }
       Serial.println("writing eeprom Appl_type:");
       for (int i = 0; i < appl_type.length(); ++i) {
         EEPROM.write(116 + i, appl_type[i]);
+#ifdef DEBUG		
         Serial.print("Wrote: ");
         Serial.println(appl_type[i]);
+#endif		
       }
       Serial.println("writing eeprom Appl_name:");
       for (int i = 0; i < appl_name.length(); ++i) {
         EEPROM.write(132 + i, appl_name[i]);
+#ifdef DEBUG		
         Serial.print("Wrote: ");
         Serial.println(appl_name[i]);
+#endif		
       }
       EEPROM.commit();
       s += "Hello from thingSocket ";
+#ifdef DEBUG	  
       s += "Found ";
       s += req;
-      s += "<p> saved to EEPROM...";
+#endif	  
+      s += "<p> Details saved to EEPROM...";
       configure_flag = true;
       NotificationBroadcast(which_plug,value);
     }
@@ -523,22 +560,28 @@ void WebService(bool webtype) {
       Serial.println("writing eeprom Zone with default value");
       for (int i = 0; i < zone.length(); ++i) {
         EEPROM.write(100 + i, qzone[i]);
-        Serial.print("Wrote: ");
+#ifdef DEBUG      
+		Serial.print("Wrote: ");
         Serial.println(qzone[i]);
+#endif		
       }
       String qappl_type = "default";
       Serial.println("writing eeprom Appl_type with default value");
       for (int i = 0; i < appl_type.length(); ++i) {
         EEPROM.write(116 + i, qappl_type[i]);
+#ifdef DEBUG		
         Serial.print("Wrote: ");
         Serial.println(qappl_type[i]);
+#endif		
       }
       String qappl_name = "default";
-      Serial.println("writing eeprom Appl_name:");
+      Serial.println("writing eeprom Appl_name with default value");
       for (int i = 0; i < appl_name.length(); ++i) {
         EEPROM.write(132 + i, qappl_name[i]);
+#ifdef DEBUG		
         Serial.print("Wrote: ");
         Serial.println(qappl_name[i]);
+#endif		
       }
       EEPROM.commit();
       reboot_flag = true;
@@ -644,11 +687,13 @@ void Broadcast(void) {
   brdcast_msg += ":";
   brdcast_msg += software_version;
   brdcast_msg += "|";
-  brdcast_msg += String(totalResources);
+  brdcast_msg += String(MAX_RESOURCES);
   brdcast_msg += "|";
   Udp.write(brdcast_msg.c_str());
   Udp.endPacket();
+#ifdef DEBUG
   Serial.println(brdcast_msg);
+#endif  
 }
 
 void NotificationBroadcast(int which_plug, int state) {
@@ -675,7 +720,9 @@ void NotificationBroadcast(int which_plug, int state) {
   }
   Udp.write(notif_msg.c_str());
   Udp.endPacket();
+#ifdef DEBUG  
   Serial.println(notif_msg);
+#endif  
 }
 
 /**
@@ -725,11 +772,13 @@ void UrlDecode(char *src) {
 
 void pin_ISR() {
   detachInterrupt(digitalPinToInterrupt(SWITCH));
+#ifdef DEBUG  
   String s;
   s += "ISR Called ";
   s += String(num);
   Serial.println(s);
   num++;
+#endif
   
   myDelay(250);
   volatile int buttonState = digitalRead(SWITCH);
