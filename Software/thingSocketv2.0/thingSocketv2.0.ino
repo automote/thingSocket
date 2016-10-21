@@ -442,7 +442,7 @@ void WebService(bool webtype) {
 	  
 		if (req.startsWith("/resource/set?res=")) {
 			//resource/set?res=0&val=100
-			// No need to acquire argument as thingSocket has only 1 resource
+			// No need to acquire resource argument as thingSocket has only 1 resource
 			// By Default res = 0
 
 			// Getting value of resource
@@ -456,14 +456,13 @@ void WebService(bool webtype) {
 			UpdatePlugNLED(which_plug, value);
 			s += "Resource 0";
 			s += " = ";
-			s += String((digitalRead(PLUG) > 0) ? 0 : 100);
+			s += String((digitalRead(PLUG) > 0) ? 100 : 0);
 			s += "<br>"; // Go to the next line.
 			
 		}
 		else if (value == -2) {
 			s += "Resource 0";
 			s += " = ";
-			value = (digitalRead(PLUG) > 0) ? 0 : 100;
 			s += String(value);
 			s += "<br>"; // Go to the next line.
 #ifdef DEBUG
@@ -713,7 +712,6 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += "|";
   notif_msg += String(resource_number);
   notif_msg += "|";
-  notif_msg += (state > 0) ? "0|" : "100|";
   if(configure_flag) {
     notif_msg += "CONFIGURED|";
     configure_flag = false;
