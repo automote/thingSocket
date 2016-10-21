@@ -458,7 +458,7 @@ void WebService(bool webtype) {
 			s += " = ";
 			s += String((digitalRead(PLUG) > 0) ? 100 : 0);
 			s += "<br>"; // Go to the next line.
-			
+			value = (digitalRead(PLUG) > 0) ? 100 : 0;
 		}
 		else if (value == -2) {
 			s += "Resource 0";
@@ -712,6 +712,7 @@ void NotificationBroadcast(int which_plug, int state) {
   notif_msg += "|";
   notif_msg += String(resource_number);
   notif_msg += "|";
+  notif_msg += String((state > 0) ? "100|" : "0|");
   if(configure_flag) {
     notif_msg += "CONFIGURED|";
     configure_flag = false;
