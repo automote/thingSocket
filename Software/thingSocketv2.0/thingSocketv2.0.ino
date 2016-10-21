@@ -458,11 +458,11 @@ void WebService(bool webtype) {
 			s += " = ";
 			s += String((digitalRead(PLUG) > 0) ? 100 : 0);
 			s += "<br>"; // Go to the next line.
-			value = (digitalRead(PLUG) > 0) ? 100 : 0;
 		}
 		else if (value == -2) {
 			s += "Resource 0";
 			s += " = ";
+			value = (digitalRead(PLUG) > 0) ? 100 : 0;
 			s += String(value);
 			s += "<br>"; // Go to the next line.
 #ifdef DEBUG
