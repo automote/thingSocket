@@ -51,8 +51,8 @@ WiFiServer server(80);
 
 // Global Constant
 const char* company_name = "thingTronics";
-const char* hardware_version = "v1.0";
-const char* software_version = "v1.1";
+const char* hardware_version = "v2.0";
+const char* software_version = "v2.0";
 const char APpsk[] = "12345678";
 const int resource_number = 0;
 
