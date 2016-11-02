@@ -20,7 +20,7 @@
  *  Inspired by:
  *  https://github.com/chriscook8/esp-arduino-apboot
  *  This example code is under GPL v3.
- *  modified 11 Feb 2016
+ *  modified 2 November 2016
  *  by Lovelesh Patel
  */
 
@@ -31,7 +31,7 @@
 
 // GPIO14 connected to Socket, GPIO5 to SWITCH, GPIO4 to SWITCH_LED
 // GPIO16 is for status
-#define PLUG 14
+#define PLUG 2
 #define CONNECT 16
 #define SWITCH_LED 4
 #define SWITCH 5
@@ -91,6 +91,8 @@ void NotificationBroadcast(int which_plug, int state);
 void UrlDecode(char *src);
 void pin_ISR(void);
 void myDelay(int);
+void WriteInitalConfig(void);
+void ReadConfig(void);
 
 void setup() {
   bool AP_required = false;
@@ -206,33 +208,12 @@ bool SSIDSearch(void) {
 }
 
 void ZoneSearch(void) {
-  Serial.println("Start Zone search from EEPROM");
-  // Read EEPROM for SSID and Password
-  Serial.println("Reading Zone from EEPROM");
-  for (int i = 100; i < 116; ++i) {
-    zone += char(EEPROM.read(i));
-  }
-#ifdef DEBUG
-  Serial.print("Zone: ");
-  Serial.println(zone);
-#endif
-
-  Serial.println("Reading Appliance Type from EEPROM");
-  for (int i = 116; i < 132; ++i) {
-    appl_type += char(EEPROM.read(i));
-  }
-#ifdef DEBUG
-  Serial.print("Appliance Type: ");
-  Serial.println(appl_type);
-#endif
-  Serial.println("Reading Appliance Name from EEPROM");
-  for (int i = 132; i < 148; ++i) {
-    appl_name += char(EEPROM.read(i));
-  }
-#ifdef DEBUG
-  Serial.print("Appliance Name: ");
-  Serial.println(appl_name);
-#endif
+	if (EEPROM.read(500) != 251) {
+		//if not load default config files to EEPROM
+		WriteInitalConfig();
+	}
+	// Read the config settings from EEPROM
+	ReadConfig(); 
 }
 
 bool TestWifi(void) {
@@ -312,7 +293,7 @@ void WebService(bool webtype) {
   // Check if a client has connected
   WiFiClient client = server.available();
   if (!client) {
-    if (count % 300 == 0) {
+    if (count % 60 == 0) {
       Broadcast();
     }
     delay(50);
@@ -512,6 +493,11 @@ void WebService(bool webtype) {
 #ifdef DEBUG      
 	  appl_name = String(qappl_name);
 #endif
+	  Serial.println("clearing eeprom");
+	  for (int i = 100; i < 155; ++i) {
+		EEPROM.write(i, 0);
+      }
+	  
       Serial.println("writing eeprom Zone:");
       for (int i = 0; i < zone.length(); ++i) {
         EEPROM.write(100 + i, zone[i]);
@@ -551,39 +537,10 @@ void WebService(bool webtype) {
       s += "Hello from thingSocket";
       s += "<p>Factory Resetting the device<p>";
       Serial.println("Sending 200");
-      Serial.println("clearing eeprom");
-      for (int i = 0; i < 155; ++i) {
-        EEPROM.write(i, 0);
-      }
-      String qzone = "default";
-      Serial.println("writing eeprom Zone with default value");
-      for (int i = 0; i < zone.length(); ++i) {
-        EEPROM.write(100 + i, qzone[i]);
-#ifdef DEBUG      
-		Serial.print("Wrote: ");
-        Serial.println(qzone[i]);
-#endif		
-      }
-      String qappl_type = "default";
-      Serial.println("writing eeprom Appl_type with default value");
-      for (int i = 0; i < appl_type.length(); ++i) {
-        EEPROM.write(116 + i, qappl_type[i]);
-#ifdef DEBUG		
-        Serial.print("Wrote: ");
-        Serial.println(qappl_type[i]);
-#endif		
-      }
-      String qappl_name = "default";
-      Serial.println("writing eeprom Appl_name with default value");
-      for (int i = 0; i < appl_name.length(); ++i) {
-        EEPROM.write(132 + i, qappl_name[i]);
-#ifdef DEBUG		
-        Serial.print("Wrote: ");
-        Serial.println(qappl_name[i]);
-#endif		
-      }
-      EEPROM.commit();
-      reboot_flag = true;
+      
+	  // Writing default configuration
+	  WriteInitalConfig();
+	  reboot_flag = true;
     }
     else if ( req.startsWith("/reboot")) {
       s += "Rebooting thingSocket";
@@ -659,7 +616,7 @@ void SetupAP(void) {
 
 void UpdatePlugNLED(int plug, int value) {
   if (value != 0){
-	  value = 100;
+	value = 100;
   }
   digitalWrite(SWITCH_LED, value);
   digitalWrite(plug, value);
@@ -676,7 +633,6 @@ void Broadcast(void) {
   
   // thingTronics|thingSocket-ABCDEF|v0.1:v1.1|totalResources|
   // Building up the Broadcast message
-  Udp.beginPacket(bcast, BROADCAST_PORT);
   String brdcast_msg;
   brdcast_msg += company_name;
   brdcast_msg += "|";
@@ -688,7 +644,10 @@ void Broadcast(void) {
   brdcast_msg += "|";
   brdcast_msg += String(MAX_RESOURCES);
   brdcast_msg += "|";
+  Udp.beginPacket(bcast, BROADCAST_PORT);
   Udp.write(brdcast_msg.c_str());
+  yield();
+  delay(1);
   Udp.endPacket();
 #ifdef DEBUG
   Serial.println(brdcast_msg);
@@ -698,7 +657,6 @@ void Broadcast(void) {
 void NotificationBroadcast(int which_plug, int state) {
   //thingTronics|thingSocket-ABCDEF|zone|type|name|magicResourceNumber|value|
   // Building up the Notification message
-  Udp.beginPacket(bcast, NOTIFICATION_PORT);
   String notif_msg;
   notif_msg += company_name;
   notif_msg += "|";
@@ -717,7 +675,14 @@ void NotificationBroadcast(int which_plug, int state) {
     notif_msg += "CONFIGURED|";
     configure_flag = false;
   }
-  Udp.write(notif_msg.c_str());
+  // Add this jugglery for sending complete packets
+  unsigned int len = notif_msg.length();
+  
+  byte* msg_buf = (byte*)malloc(len);
+  memcpy(msg_buf, notif_msg.c_str(), len);
+  
+  Udp.beginPacket(bcast, NOTIFICATION_PORT);
+  Udp.write(msg_buf, len);
   Udp.endPacket();
 #ifdef DEBUG  
   Serial.println(notif_msg);
@@ -789,4 +754,77 @@ void myDelay(int x) {
   for(int i=0; i<=x; i++) {
     delayMicroseconds(1000);
   }
+}
+
+void WriteInitalConfig(void) {
+	Serial.println("Writing default configuration");
+	EEPROM.write(500, 251);
+	Serial.println("clearing eeprom");
+  for (int i = 0; i < 155; ++i) {
+	EEPROM.write(i, 0);
+  }
+  String qzone = "default";
+  Serial.println("writing eeprom Zone with default value");
+  for (int i = 0; i < qzone.length(); ++i) {
+	EEPROM.write(100 + i, qzone[i]);
+#ifdef DEBUG      
+	Serial.print("Wrote: ");
+	Serial.println(qzone[i]);
+#endif		
+  }
+  String qappl_type = "default";
+  Serial.println("writing eeprom Appl_type with default value");
+  for (int i = 0; i < qappl_type.length(); ++i) {
+	EEPROM.write(116 + i, qappl_type[i]);
+#ifdef DEBUG		
+	Serial.print("Wrote: ");
+	Serial.println(qappl_type[i]);
+#endif		
+  }
+  String qappl_name = "default";
+  Serial.println("writing eeprom Appl_name with default value");
+  for (int i = 0; i < qappl_name.length(); ++i) {
+	EEPROM.write(132 + i, qappl_name[i]);
+#ifdef DEBUG		
+	Serial.print("Wrote: ");
+	Serial.println(qappl_name[i]);
+#endif		
+  }
+  EEPROM.commit();
+  delay(10);
+}
+
+void ReadConfig(void) {
+  // Clearing the zone type and name strings
+  zone = "";
+  appl_type = "";
+  appl_name = "";
+  Serial.println("Start Zone search from EEPROM");
+  // Read EEPROM for SSID and Password
+  Serial.println("Reading Zone from EEPROM");
+  for (int i = 100; i < 116; ++i) {
+    zone += char(EEPROM.read(i));
+  }
+#ifdef DEBUG
+  Serial.print("Zone: ");
+  Serial.println(zone);
+#endif
+
+  Serial.println("Reading Appliance Type from EEPROM");
+  for (int i = 116; i < 132; ++i) {
+    appl_type += char(EEPROM.read(i));
+  }
+#ifdef DEBUG
+  Serial.print("Appliance Type: ");
+  Serial.println(appl_type);
+#endif
+  Serial.println("Reading Appliance Name from EEPROM");
+  for (int i = 132; i < 148; ++i) {
+    appl_name += char(EEPROM.read(i));
+  }
+#ifdef DEBUG
+  Serial.print("Appliance Name: ");
+  Serial.println(appl_name);
+#endif
+  delay(10);
 }
