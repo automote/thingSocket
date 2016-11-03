@@ -78,3 +78,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 *.tmp
+*.rar
+*.zip
+*.s##
+*.lck
+*.s#1
+*.s#2

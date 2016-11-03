@@ -31,10 +31,10 @@
 
 // GPIO14 connected to Socket, GPIO5 to SWITCH, GPIO4 to SWITCH_LED
 // GPIO16 is for status
-#define PLUG 14
+#define PLUG 12
 #define CONNECT 16
-#define SWITCH_LED 4
-#define SWITCH 5
+#define SWITCH_LED 13
+#define SWITCH 0
 
 #define BROADCAST_PORT 5000   // Port for sending general broadcast messages
 #define NOTIFICATION_PORT 5002     // Port for notification broadcasts
@@ -64,10 +64,11 @@ static unsigned char bcast[4] = { 255, 255, 255, 255 } ;   // broadcast IP addre
 unsigned int count = 0;
 volatile unsigned int num = 0;
 
+
 // Reboot flag to reboot the device when necessary
 bool reboot_flag = false;
 bool configure_flag = false;
-
+bool button_flag = false;
 // Create an instance of the UDP server
 WiFiUDP Udp;
 
@@ -144,7 +145,7 @@ void InitHardware(void) {
   // prepare the SWITCH and SWITCH_LED i.e. GPIO4 and GPIO5
   pinMode(SWITCH, INPUT);
   pinMode(SWITCH_LED, OUTPUT);
-  digitalWrite(SWITCH_LED, digitalRead(PLUG));
+  digitalWrite(SWITCH_LED, !digitalRead(PLUG));
   attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
   
   // Set the thingSocket into STATION mode
@@ -710,8 +711,8 @@ void pin_ISR() {
   num++;
   
   myDelay(250);
-  volatile int buttonState = digitalRead(SWITCH);
-  UpdatePlugNLED(PLUG, buttonState);
+  button_flag = !button_flag; // save the new state of button_flag
+  UpdatePlugNLED(PLUG, button_flag);
   attachInterrupt(digitalPinToInterrupt(SWITCH), pin_ISR, CHANGE);
 }
 
