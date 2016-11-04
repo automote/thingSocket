@@ -31,7 +31,7 @@
 
 // GPIO14 connected to Socket, GPIO5 to SWITCH, GPIO4 to SWITCH_LED
 // GPIO16 is for status
-#define PLUG 2
+#define PLUG 14
 #define CONNECT 16
 #define SWITCH_LED 4
 #define SWITCH 5
